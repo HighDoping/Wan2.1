@@ -67,9 +67,16 @@ class WanT2V:
             t5_cpu (`bool`, *optional*, defaults to False):
                 Whether to place T5 model on CPU. Only works without t5_fsdp.
         """
-        self.device = torch.device(
-            "mps" if torch.backends.mps.is_available() else "cpu"
-        )
+        # Check if device_id is a torch.device instance
+        if isinstance(device_id, torch.device):
+            self.device = device_id
+        elif device_id == "mps" or (isinstance(device_id, int) and device_id == -1):
+            self.device = torch.device(
+                "mps" if torch.backends.mps.is_available() else "cpu"
+            )
+        else:
+            self.device = torch.device(f"cuda:{device_id}")
+
         self.config = config
         self.checkpoint_dir = checkpoint_dir
         self.device_id = device_id
@@ -80,43 +87,12 @@ class WanT2V:
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
 
-        # self.shard_fn = partial(shard_model, device_id=self.device_id)
-
         self.vae_stride = config.vae_stride
         self.patch_size = config.patch_size
 
         logging.info(f"Creating WanModel from {checkpoint_dir}")
 
-        # if use_usp:
-        #     try:
-        #         from xfuser.core.distributed import get_sequence_parallel_world_size
-
-        #         from .distributed.xdit_context_parallel import (
-        #             usp_attn_forward,
-        #             usp_dit_forward,
-        #         )
-
-        #         for block in self.model.blocks:
-        #             block.self_attn.forward = types.MethodType(
-        #                 usp_attn_forward, block.self_attn
-        #             )
-        #         self.model.forward = types.MethodType(usp_dit_forward, self.model)
-        #         self.sp_size = get_sequence_parallel_world_size()
-        #     except ImportError:
-        #         # Fall back to non-USP mode on systems without xfuser
-        #         logging.warning("xfuser package not found, disabling USP mode")
-        #         self.sp_size = 1
-        #         use_usp = False
-        # else:
-        #     self.sp_size = 1
         self.sp_size = 1
-
-        # if dist.is_initialized():
-        #     dist.barrier()
-        # if dit_fsdp:
-        #     self.model = self.shard_fn(self.model)
-        # else:
-        #     self.model.to(self.device)
 
         self.sample_neg_prompt = config.sample_neg_prompt
 
@@ -200,7 +176,6 @@ class WanT2V:
                 self.checkpoint_dir, self.config.t5_checkpoint
             ),
             tokenizer_path=os.path.join(self.checkpoint_dir, self.config.t5_tokenizer),
-            # shard_fn=self.shard_fn if self.t5_fsdp else None,
             shard_fn=None,
         )
 
@@ -297,9 +272,9 @@ class WanT2V:
 
             x0 = latents
             if offload_model:
-                # self.model.cpu()
                 del self.model
                 clear_cache()
+
             if self.rank == 0:
                 self.vae = WanVAE(
                     vae_pth=os.path.join(
