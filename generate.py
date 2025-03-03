@@ -341,12 +341,42 @@ def generate(args):
             seed=args.base_seed,
             offload_model=args.offload_model)
 
-    # Save output (single device, so no rank check needed)
+    # Save output 
     if args.save_file is None:
         formatted_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         formatted_prompt = args.prompt.replace(" ", "_").replace("/", "_")[:50]
         suffix = '.png' if "t2i" in args.task else '.mp4'
-        args.save_file = f"{args.task}_{args.size}_{formatted_prompt}_{formatted_time}" + suffix
+        # Use Windows-compatible path if needed and include ulysses/ring parameters for distributed cases
+        if sys.platform == 'win32':
+            size_str = args.size.replace('*', 'x')
+        else:
+            size_str = args.size
+            
+        # Single device (MPS/CPU) doesn't use ulysses/ring parallelism
+        if args.device and (args.device == "mps" or args.device == "cpu"):
+            args.save_file = f"{args.task}_{size_str}_{formatted_prompt}_{formatted_time}{suffix}"
+        else:
+            # Include parallelism parameters for distributed cases
+            args.save_file = f"{args.task}_{size_str}_{args.ulysses_size}_{args.ring_size}_{formatted_prompt}_{formatted_time}{suffix}"
+
+    if "t2i" in args.task:
+        logging.info(f"Saving generated image to {args.save_file}")
+        cache_image(
+            tensor=video.squeeze(1)[None],
+            save_file=args.save_file,
+            nrow=1,
+            normalize=True,
+            value_range=(-1, 1))
+    else:
+        logging.info(f"Saving generated video to {args.save_file}")
+        cache_video(
+            tensor=video[None],
+            save_file=args.save_file,
+            fps=cfg.sample_fps,
+            nrow=1,
+            normalize=True,
+            value_range=(-1, 1))
+    logging.info("Finished.")
 
     if "t2i" in args.task:
         logging.info(f"Saving generated image to {args.save_file}")

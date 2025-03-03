@@ -19,33 +19,40 @@ This version includes modifications to make the model compatible with macOS, spe
 Follow these steps to set up the environment on macOS:
 
 1. **Install Homebrew**: If not already installed, use Homebrew to manage packages.
+
    ```bash
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
-   
+
 2. **Install Python 3.10+**:
+
    ```bash
    brew install python@3.10
    ```
 
 3. **Create and Activate a Virtual Environment**:
+
    ```bash
    python3.10 -m venv venv_wan
    source venv_wan/bin/activate
    ```
-    
+
 4. **Install Dependencies**:
+
    ```bash
    pip install -r requirements.txt
    pip install einops
    ```
 
 5. **Download models using huggingface-cli**:
+
    ```bash
    pip install "huggingface_hub[cli]"
    huggingface-cli download Wan-AI/Wan2.1-T2V-1.3B --local-dir ./Wan2.1-T2V-1.3B
    ```
+
    **Or download models using huggingface-cli**:
+
    ```bash
    pip install modelscope
    modelscope download Wan-AI/Wan2.1-T2V-1.3B --local_dir ./Wan2.1-T2V-1.3B
@@ -70,28 +77,27 @@ python generate.py --task t2v-1.3B --size "480*832" --frame_num 16 --sample_step
 
 This project is based on the original Wan2.1 model. Special thanks to the original authors and contributors for their work.
 
-
-* Feb 25, 2025: 👋 We've released the inference code and weights of Wan2.1.
-* Feb 27, 2025: 👋 Wan2.1 has been integrated into [ComfyUI](https://comfyanonymous.github.io/ComfyUI_examples/wan/). Enjoy!
+- Feb 25, 2025: 👋 We've released the inference code and weights of Wan2.1.
+- Feb 27, 2025: 👋 Wan2.1 has been integrated into [ComfyUI](https://comfyanonymous.github.io/ComfyUI_examples/wan/). Enjoy!
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/4aca6063-60bf-4953-bfb7-e265053f49ef" width="70%" poster=""> </video>
 </div>
 
-
 ## 📑 Todo List
+
 - Wan2.1 Text-to-Video
-    - [x] Multi-GPU Inference code of the 14B and 1.3B models
-    - [x] Checkpoints of the 14B and 1.3B models
-    - [x] Gradio demo
-    - [x] ComfyUI integration
-    - [ ] Diffusers integration
+  - [x] Multi-GPU Inference code of the 14B and 1.3B models
+  - [x] Checkpoints of the 14B and 1.3B models
+  - [x] Gradio demo
+  - [x] ComfyUI integration
+  - [ ] Diffusers integration
 - Wan2.1 Image-to-Video
-    - [x] Multi-GPU Inference code of the 14B model
-    - [x] Checkpoints of the 14B model
-    - [x] Gradio demo
-    - [X] ComfyUI integration
-    - [ ] Diffusers integration
+  - [x] Multi-GPU Inference code of the 14B model
+  - [x] Checkpoints of the 14B model
+  - [x] Gradio demo
+  - [X] ComfyUI integration
+  - [ ] Diffusers integration
 | Models        |                       Download Link                                           |    Notes                      |
 | --------------|-------------------------------------------------------------------------------|-------------------------------|
 | T2V-14B       |      🤗 [Huggingface](https://huggingface.co/Wan-AI/Wan2.1-T2V-14B)      🤖 [ModelScope](https://www.modelscope.cn/models/Wan-AI/Wan2.1-T2V-14B)          | Supports both 480P and 720P
@@ -101,18 +107,20 @@ This project is based on the original Wan2.1 model. Special thanks to the origin
 
 > 💡Note: The 1.3B model is capable of generating videos at 720P resolution. However, due to limited training at this resolution, the results are generally less stable compared to 480P. For optimal performance, we recommend using 480P resolution.
 
-
 Download models using huggingface-cli:
+
 ```
 pip install "huggingface_hub[cli]"
 huggingface-cli download Wan-AI/Wan2.1-T2V-14B --local-dir ./Wan2.1-T2V-14B
 ```
 
 Download models using modelscope-cli:
+
 ```
 pip install modelscope
 modelscope download Wan-AI/Wan2.1-T2V-14B --local_dir ./Wan2.1-T2V-14B
 ```
+
 #### Run Text-to-Video Generation
 
 This repository supports two Text-to-Video models (1.3B and 14B) and two resolutions (480P and 720P). The parameters and configurations for these models are as follows:
@@ -145,7 +153,6 @@ This repository supports two Text-to-Video models (1.3B and 14B) and two resolut
     </tbody>
 </table>
 
-
 ##### (1) Without Prompt Extention
 
 To facilitate implementation, we will start with a basic version of the inference process that skips the [prompt extension](#2-using-prompt-extention) step.
@@ -164,14 +171,12 @@ python generate.py  --task t2v-1.3B --size 832*480 --ckpt_dir ./Wan2.1-T2V-1.3B 
 
 > 💡Note: If you are using the `T2V-1.3B` model, we recommend setting the parameter `--sample_guide_scale 6`. The `--sample_shift parameter` can be adjusted within the range of 8 to 12 based on the performance.
 
-
 - Multi-GPU inference using FSDP + xDiT USP
 
 ```
 pip install "xfuser>=0.4.1"
 torchrun --nproc_per_node=8 generate.py --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --dit_fsdp --t5_fsdp --ulysses_size 8 --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage."
 ```
-
 
 ##### (2) Using Prompt Extention
 
@@ -185,7 +190,9 @@ To generate a video, use the following command:
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 python generate.py --task t2v-1.3B --size "480*832" --frame_num 16 --sample_steps 25 --ckpt_dir ./Wan2.1-T2V-1.3B --offload_model True --t5_cpu --device mps --prompt "Lion running under snow in Samarkand" --save_file output_video.mp4
 ```
+
 DASH_API_KEY=your_key python generate.py  --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage" --use_prompt_extend --prompt_extend_method 'dashscope' --prompt_extend_target_lang 'ch'
+
 ```
 
 - Using a local model for extension.
@@ -197,18 +204,25 @@ DASH_API_KEY=your_key python generate.py  --task t2v-14B --size 1280*720 --ckpt_
   - You can modify the model used for extension with the parameter `--prompt_extend_model` , allowing you to specify either a local model path or a Hugging Face model. For example:
 
 ```
+
 python generate.py  --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage" --use_prompt_extend --prompt_extend_method 'local_qwen' --prompt_extend_target_lang 'ch'
+
 ```
 
 ##### (3) Runing local gradio
 
 ```
+
 cd gradio
+
 # if one uses dashscope’s API for prompt extension
+
 DASH_API_KEY=your_key python t2v_14B_singleGPU.py --prompt_extend_method 'dashscope' --ckpt_dir ./Wan2.1-T2V-14B
 
 # if one uses a local model for prompt extension
+
 python t2v_14B_singleGPU.py --prompt_extend_method 'local_qwen' --ckpt_dir ./Wan2.1-T2V-14B
+
 ```
 
 
@@ -248,7 +262,9 @@ Similar to Text-to-Video, Image-to-Video is also divided into processes with and
 
 - Single-GPU inference
 ```
+
 python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
+
 ```
 
 > 💡For the Image-to-Video task, the `size` parameter represents the area of the generated video, with the aspect ratio following that of the original input image.
@@ -257,8 +273,10 @@ python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-72
 - Multi-GPU inference using FSDP + xDiT USP
 
 ```
+
 pip install "xfuser>=0.4.1"
 torchrun --nproc_per_node=8 generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --dit_fsdp --t5_fsdp --ulysses_size 8 --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
+
 ```
 
 ##### (2) Using Prompt Extention
@@ -268,26 +286,36 @@ The process of prompt extension can be referenced [here](#2-using-prompt-extenti
 
 Run with local prompt extention using `Qwen/Qwen2.5-VL-7B-Instruct`:
 ```
+
 python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --use_prompt_extend --prompt_extend_model Qwen/Qwen2.5-VL-7B-Instruct --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
+
 ```
 
 Run with remote prompt extention using `dashscope`:
 ```
+
 DASH_API_KEY=your_key python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --use_prompt_extend --prompt_extend_method 'dashscope' --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
+
 ```
 
 ##### (3) Runing local gradio
 
 ```
+
 cd gradio
+
 # if one only uses 480P model in gradio
+
 DASH_API_KEY=your_key python i2v_14B_singleGPU.py --prompt_extend_method 'dashscope' --ckpt_dir_480p ./Wan2.1-I2V-14B-480P
 
 # if one only uses 720P model in gradio
+
 DASH_API_KEY=your_key python i2v_14B_singleGPU.py --prompt_extend_method 'dashscope' --ckpt_dir_720p ./Wan2.1-I2V-14B-720P
 
 # if one uses both 480P and 720P models in gradio
+
 DASH_API_KEY=your_key python i2v_14B_singleGPU.py --prompt_extend_method 'dashscope' --ckpt_dir_480p ./Wan2.1-I2V-14B-480P --ckpt_dir_720p ./Wan2.1-I2V-14B-720P
+
 ```
 
 
@@ -299,25 +327,33 @@ Wan2.1 is a unified model for both image and video generation. Since it was trai
 
 - Single-GPU inference
 ```
+
 python generate.py --task t2i-14B --size 1024*1024 --ckpt_dir ./Wan2.1-T2V-14B  --prompt '一个朴素端庄的美人'
+
 ```
 
 - Multi-GPU inference using FSDP + xDiT USP
 
 ```
+
 torchrun --nproc_per_node=8 generate.py --dit_fsdp --t5_fsdp --ulysses_size 8 --base_seed 0 --frame_num 1 --task t2i-14B  --size 1024*1024 --prompt '一个朴素端庄的美人' --ckpt_dir ./Wan2.1-T2V-14B
+
 ```
 
 ##### (2) With Prompt Extention
 
 - Single-GPU inference
 ```
+
 python generate.py --task t2i-14B --size 1024*1024 --ckpt_dir ./Wan2.1-T2V-14B  --prompt '一个朴素端庄的美人' --use_prompt_extend
+
 ```
 
 - Multi-GPU inference using FSDP + xDiT USP
 ```
+
 torchrun --nproc_per_node=8 generate.py --dit_fsdp --t5_fsdp --ulysses_size 8 --base_seed 0 --frame_num 1 --task t2i-14B  --size 1024*1024 --ckpt_dir ./Wan2.1-T2V-14B --prompt '一个朴素端庄的美人' --use_prompt_extend
+
 ```
 
 
@@ -411,12 +447,14 @@ We compared **Wan2.1** with leading open-source and closed-source models to eval
 If you find our work helpful, please cite us.
 
 ```
+
 @article{wan2.1,
     title   = {Wan: Open and Advanced Large-Scale Video Generative Models},
     author  = {Wan Team},
     journal = {},
     year    = {2025}
 }
+
 ```
 
 ## License Agreement
