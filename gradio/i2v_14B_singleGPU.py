@@ -80,6 +80,7 @@ def load_model(value):
             )
             print("done", flush=True)
             return '480P'
+    return value
 
 
 def prompt_enc(prompt, img, tar_lang):
@@ -172,9 +173,9 @@ def gradio_interface():
                     placeholder="Describe the video you want to generate",
                 )
                 tar_lang = gr.Radio(
-                    choices=["CH", "EN"],
+                    choices=["ZH", "EN"],
                     label="Target language of prompt enhance",
-                    value="CH")
+                    value="ZH")
                 run_p_button = gr.Button(value="Prompt Enhance")
 
                 with gr.Accordion("Advanced Options", open=True):

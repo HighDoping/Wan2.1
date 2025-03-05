@@ -5,7 +5,7 @@
 <p>
 
 <p align="center">
-    💜 <a href=""><b>Wan</b></a> &nbsp&nbsp ｜ &nbsp&nbsp 🖥️ <a href="https://github.com/Wan-Video/Wan2.1">GitHub</a> &nbsp&nbsp  | &nbsp&nbsp🤗 <a href="https://huggingface.co/Wan-AI/">Hugging Face</a>&nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/organization/Wan-AI">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="">Paper (Coming soon)</a> &nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://wanxai.com">Blog</a> &nbsp&nbsp | &nbsp&nbsp💬 <a href="https://gw.alicdn.com/imgextra/i2/O1CN01tqjWFi1ByuyehkTSB_!!6000000000015-0-tps-611-1279.jpg">WeChat Group</a>&nbsp&nbsp | &nbsp&nbsp 📖 <a href="https://discord.gg/p5XbdQV7">Discord</a>&nbsp&nbsp
+    💜 <a href=""><b>Wan</b></a> &nbsp&nbsp ｜ &nbsp&nbsp 🖥️ <a href="https://github.com/Wan-Video/Wan2.1">GitHub</a> &nbsp&nbsp  | &nbsp&nbsp🤗 <a href="https://huggingface.co/Wan-AI/">Hugging Face</a>&nbsp&nbsp | &nbsp&nbsp🤖 <a href="https://modelscope.cn/organization/Wan-AI">ModelScope</a>&nbsp&nbsp | &nbsp&nbsp 📑 <a href="">Paper (Coming soon)</a> &nbsp&nbsp | &nbsp&nbsp 📑 <a href="https://wanxai.com">Blog</a> &nbsp&nbsp | &nbsp&nbsp💬 <a href="https://gw.alicdn.com/imgextra/i2/O1CN01tqjWFi1ByuyehkTSB_!!6000000000015-0-tps-611-1279.jpg">WeChat Group</a>&nbsp&nbsp | &nbsp&nbsp 📖 <a href="https://discord.gg/AKNgpMK4Yj">Discord</a>&nbsp&nbsp
 <br>
 
 -----
@@ -28,8 +28,9 @@ In this repository, we present **Wan2.1**, a comprehensive and open suite of vid
 
 ## 🔥 Latest News
 
-- Feb 25, 2025: 👋 We've released the inference code and weights of Wan2.1.
+- Mar 3, 2025: 👋 Wan2.1's T2V and I2V have been integrated into Diffusers ([T2V](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/wan/pipeline_wan.py) | [I2V](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/wan/pipeline_wan_i2v.py)). Feel free to give it a try!
 - Feb 27, 2025: 👋 Wan2.1 has been integrated into [ComfyUI](https://comfyanonymous.github.io/ComfyUI_examples/wan/). Enjoy!
+- Feb 25, 2025: 👋 We've released the inference code and weights of Wan2.1.
 
 ## 📑 Todo List
 
@@ -38,13 +39,15 @@ In this repository, we present **Wan2.1**, a comprehensive and open suite of vid
   - [x] Checkpoints of the 14B and 1.3B models
   - [x] Gradio demo
   - [x] ComfyUI integration
-  - [ ] Diffusers integration
+  - [x] Diffusers integration
+  - [ ] Diffusers + Multi-GPU Inference
 - Wan2.1 Image-to-Video
   - [x] Multi-GPU Inference code of the 14B model
   - [x] Checkpoints of the 14B model
   - [x] Gradio demo
-  - [X] ComfyUI integration
-  - [ ] Diffusers integration
+  - [x] ComfyUI integration
+  - [x] Diffusers integration
+  - [ ] Diffusers + Multi-GPU Inference
 
 ## Quickstart
 
@@ -52,14 +55,14 @@ In this repository, we present **Wan2.1**, a comprehensive and open suite of vid
 
 Clone the repo:
 
-```
+```sh
 git clone https://github.com/Wan-Video/Wan2.1.git
 cd Wan2.1
 ```
 
 Install dependencies:
 
-```
+```sh
 # Ensure torch >= 2.4.0
 pip install -r requirements.txt
 ```
@@ -77,14 +80,14 @@ pip install -r requirements.txt
 
 Download models using huggingface-cli:
 
-```
+``` sh
 pip install "huggingface_hub[cli]"
 huggingface-cli download Wan-AI/Wan2.1-T2V-14B --local-dir ./Wan2.1-T2V-14B
 ```
 
 Download models using modelscope-cli:
 
-```
+``` sh
 pip install modelscope
 modelscope download Wan-AI/Wan2.1-T2V-14B --local_dir ./Wan2.1-T2V-14B
 ```
@@ -127,13 +130,13 @@ To facilitate implementation, we will start with a basic version of the inferenc
 
 - Single-GPU inference
 
-```
+``` sh
 python generate.py  --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage."
 ```
 
 If you encounter OOM (Out-of-Memory) issues, you can use the `--offload_model True` and `--t5_cpu` options to reduce GPU memory usage. For example, on an RTX 4090 GPU:
 
-```
+``` sh
 python generate.py  --task t2v-1.3B --size 832*480 --ckpt_dir ./Wan2.1-T2V-1.3B --offload_model True --t5_cpu --sample_shift 8 --sample_guide_scale 6 --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage."
 ```
 
@@ -141,7 +144,7 @@ python generate.py  --task t2v-1.3B --size 832*480 --ckpt_dir ./Wan2.1-T2V-1.3B 
 
 - Multi-GPU inference using FSDP + xDiT USP
 
-```
+``` sh
 pip install "xfuser>=0.4.1"
 torchrun --nproc_per_node=8 generate.py --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --dit_fsdp --t5_fsdp --ulysses_size 8 --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage."
 ```
@@ -156,7 +159,7 @@ Extending the prompts can effectively enrich the details in the generated videos
   - Use the `qwen-plus` model for text-to-video tasks and `qwen-vl-max` for image-to-video tasks.
   - You can modify the model used for extension with the parameter `--prompt_extend_model`. For example:
 
-```
+```sh
 DASH_API_KEY=your_key python generate.py  --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage" --use_prompt_extend --prompt_extend_method 'dashscope' --prompt_extend_target_lang 'zh'
 ```
 
@@ -168,13 +171,48 @@ DASH_API_KEY=your_key python generate.py  --task t2v-14B --size 1280*720 --ckpt_
   - Larger models generally provide better extension results but require more GPU memory.
   - You can modify the model used for extension with the parameter `--prompt_extend_model` , allowing you to specify either a local model path or a Hugging Face model. For example:
 
-```
+``` sh
 python generate.py  --task t2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-T2V-14B --prompt "Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage" --use_prompt_extend --prompt_extend_method 'local_qwen' --prompt_extend_target_lang 'zh'
 ```
 
-##### (3) Running local gradio
+##### (3) Running with Diffusers
 
+You can easily inference **Wan2.1**-T2V using Diffusers with the following command:
+
+``` python
+import torch
+from diffusers.utils import export_to_video
+from diffusers import AutoencoderKLWan, WanPipeline
+from diffusers.schedulers.scheduling_unipc_multistep import UniPCMultistepScheduler
+
+# Available models: Wan-AI/Wan2.1-T2V-14B-Diffusers, Wan-AI/Wan2.1-T2V-1.3B-Diffusers
+model_id = "Wan-AI/Wan2.1-T2V-14B-Diffusers"
+vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
+flow_shift = 5.0 # 5.0 for 720P, 3.0 for 480P
+scheduler = UniPCMultistepScheduler(prediction_type='flow_prediction', use_flow_sigmas=True, num_train_timesteps=1000, flow_shift=flow_shift)
+pipe = WanPipeline.from_pretrained(model_id, vae=vae, torch_dtype=torch.bfloat16)
+pipe.scheduler = scheduler
+pipe.to("cuda")
+
+prompt = "A cat and a dog baking a cake together in a kitchen. The cat is carefully measuring flour, while the dog is stirring the batter with a wooden spoon. The kitchen is cozy, with sunlight streaming through the window."
+negative_prompt = "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards"
+
+output = pipe(
+     prompt=prompt,
+     negative_prompt=negative_prompt,
+     height=720,
+     width=1280,
+     num_frames=81,
+     guidance_scale=5.0,
+    ).frames[0]
+export_to_video(output, "output.mp4", fps=16)
 ```
+
+> 💡Note: Please note that this example does not integrate Prompt Extension and distributed inference. We will soon update with the integrated prompt extension and multi-GPU version of Diffusers.
+
+##### (4) Running local gradio
+
+``` sh
 cd gradio
 # if one uses dashscope’s API for prompt extension
 DASH_API_KEY=your_key python t2v_14B_singleGPU.py --prompt_extend_method 'dashscope' --ckpt_dir ./Wan2.1-T2V-14B
@@ -218,7 +256,7 @@ Similar to Text-to-Video, Image-to-Video is also divided into processes with and
 
 - Single-GPU inference
 
-```
+```sh
 python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
 ```
 
@@ -226,7 +264,7 @@ python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-72
 
 - Multi-GPU inference using FSDP + xDiT USP
 
-```
+```sh
 pip install "xfuser>=0.4.1"
 torchrun --nproc_per_node=8 generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --dit_fsdp --t5_fsdp --ulysses_size 8 --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
 ```
@@ -247,9 +285,43 @@ Run with remote prompt extension using `dashscope`:
 DASH_API_KEY=your_key python generate.py --task i2v-14B --size 1280*720 --ckpt_dir ./Wan2.1-I2V-14B-720P --image examples/i2v_input.JPG --use_prompt_extend --prompt_extend_method 'dashscope' --prompt "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside."
 ```
 
-##### (3) Running local gradio
+##### (3) Running with Diffusers
 
+You can easily inference **Wan2.1**-I2V using Diffusers with the following command:
+
+``` python
+import torch
+from diffusers import AutoencoderKLWan, WanImageToVideoPipeline
+from diffusers.utils import export_to_video, load_image
+
+# Available models: Wan-AI/Wan2.1-I2V-14B-480P-Diffusers, Wan-AI/Wan2.1-I2V-14B-720P-Diffusers
+model_id = "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers"
+vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
+pipe = WanImageToVideoPipeline.from_pretrained(model_id, vae=vae, torch_dtype=torch.bfloat16)
+pipe.to("cuda")
+
+max_area = 720 * 1280
+height, width = 720, 1280
+image = load_image(
+    "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/astronaut.jpg"
+)
+prompt = (
+    "An astronaut hatching from an egg, on the surface of the moon, the darkness and depth of space realised in "
+    "the background. High quality, ultrarealistic detail and breath-taking movie-like camera shot."
+)
+negative_prompt = "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards"
+
+output = pipe(
+    image=image, prompt=prompt, max_area=max_area, negative_prompt=negative_prompt, num_frames=81, guidance_scale=5.0
+).frames[0]
+export_to_video(output, "output.mp4", fps=16)
 ```
+
+> 💡Note: Please note that this example does not integrate Prompt Extension and distributed inference. We will soon update with the integrated prompt extension and multi-GPU version of Diffusers.
+
+##### (4) Running local gradio
+
+```sh
 cd gradio
 # if one only uses 480P model in gradio
 DASH_API_KEY=your_key python i2v_14B_singleGPU.py --prompt_extend_method 'dashscope' --ckpt_dir_480p ./Wan2.1-I2V-14B-480P
@@ -269,13 +341,13 @@ Wan2.1 is a unified model for both image and video generation. Since it was trai
 
 - Single-GPU inference
 
-```
+```sh
 python generate.py --task t2i-14B --size 1024*1024 --ckpt_dir ./Wan2.1-T2V-14B  --prompt '一个朴素端庄的美人'
 ```
 
 - Multi-GPU inference using FSDP + xDiT USP
 
-```
+```sh
 torchrun --nproc_per_node=8 generate.py --dit_fsdp --t5_fsdp --ulysses_size 8 --base_seed 0 --frame_num 1 --task t2i-14B  --size 1024*1024 --prompt '一个朴素端庄的美人' --ckpt_dir ./Wan2.1-T2V-14B
 ```
 
@@ -283,13 +355,13 @@ torchrun --nproc_per_node=8 generate.py --dit_fsdp --t5_fsdp --ulysses_size 8 --
 
 - Single-GPU inference
 
-```
+```sh
 python generate.py --task t2i-14B --size 1024*1024 --ckpt_dir ./Wan2.1-T2V-14B  --prompt '一个朴素端庄的美人' --use_prompt_extend
 ```
 
 - Multi-GPU inference using FSDP + xDiT USP
 
-```
+```sh
 torchrun --nproc_per_node=8 generate.py --dit_fsdp --t5_fsdp --ulysses_size 8 --base_seed 0 --frame_num 1 --task t2i-14B  --size 1024*1024 --ckpt_dir ./Wan2.1-T2V-14B --prompt '一个朴素端庄的美人' --use_prompt_extend
 ```
 
@@ -393,4 +465,4 @@ We would like to thank the contributors to the [SD3](https://huggingface.co/stab
 
 ## Contact Us
 
-If you would like to leave a message to our research or product teams, feel free to join our [Discord](https://discord.gg/p5XbdQV7) or [WeChat groups](https://gw.alicdn.com/imgextra/i2/O1CN01tqjWFi1ByuyehkTSB_!!6000000000015-0-tps-611-1279.jpg)!
+If you would like to leave a message to our research or product teams, feel free to join our [Discord](https://discord.gg/AKNgpMK4Yj) or [WeChat groups](https://gw.alicdn.com/imgextra/i2/O1CN01tqjWFi1ByuyehkTSB_!!6000000000015-0-tps-611-1279.jpg)!
