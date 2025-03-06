@@ -1,21 +1,23 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import argparse
-from datetime import datetime
 import logging
 import os
 import sys
 import warnings
+from datetime import datetime
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
-import torch, random
+import random
+
+import torch
 import torch.distributed as dist
 from PIL import Image
 
 import wan
-from wan.configs import WAN_CONFIGS, SIZE_CONFIGS, MAX_AREA_CONFIGS, SUPPORTED_SIZES
+from wan.configs import MAX_AREA_CONFIGS, SIZE_CONFIGS, SUPPORTED_SIZES, WAN_CONFIGS
 from wan.utils.prompt_extend import DashScopePromptExpander, QwenPromptExpander
-from wan.utils.utils import cache_video, cache_image, str2bool
+from wan.utils.utils import cache_image, cache_video, str2bool
 
 EXAMPLE_PROMPT = {
     "t2v-1.3B": {
@@ -28,10 +30,8 @@ EXAMPLE_PROMPT = {
         "prompt": "一个朴素端庄的美人",
     },
     "i2v-14B": {
-        "prompt":
-            "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside.",
-        "image":
-            "examples/i2v_input.JPG",
+        "prompt": "Summer beach vacation style, a white cat wearing sunglasses sits on a surfboard. The fluffy-furred feline gazes directly at the camera with a relaxed expression. Blurred beach scenery forms the background featuring crystal-clear waters, distant green hills, and a blue sky dotted with white clouds. The cat assumes a naturally relaxed posture, as if savoring the sea breeze and warm sunlight. A close-up shot highlights the feline's intricate details and the refreshing atmosphere of the seaside.",
+        "image": "examples/i2v_input.JPG",
     },
 }
 
@@ -57,14 +57,17 @@ def _validate_args(args):
 
     # T2I frame_num check
     if "t2i" in args.task:
-        assert args.frame_num == 1, f"Unsupport frame_num {args.frame_num} for task {args.task}"
+        assert args.frame_num == 1, (
+            f"Unsupport frame_num {args.frame_num} for task {args.task}"
+        )
 
-    args.base_seed = args.base_seed if args.base_seed >= 0 else random.randint(
-        0, sys.maxsize)
+    args.base_seed = (
+        args.base_seed if args.base_seed >= 0 else random.randint(0, sys.maxsize)
+    )
     # Size check
-    assert args.size in SUPPORTED_SIZES[
-        args.
-        task], f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
+    assert args.size in SUPPORTED_SIZES[args.task], (
+        f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
+    )
 
 
 def _parse_args():
@@ -76,121 +79,141 @@ def _parse_args():
         type=str,
         default="t2v-14B",
         choices=list(WAN_CONFIGS.keys()),
-        help="The task to run.")
+        help="The task to run.",
+    )
     parser.add_argument(
         "--size",
         type=str,
         default="1280*720",
         choices=list(SIZE_CONFIGS.keys()),
-        help="The area (width*height) of the generated video. For the I2V task, the aspect ratio of the output video will follow that of the input image."
+        help="The area (width*height) of the generated video. For the I2V task, the aspect ratio of the output video will follow that of the input image.",
+    )
+    parser.add_argument(
+        "--tile_size", type=int, default=128, help="The tile size for VAE in T2V task."
     )
     parser.add_argument(
         "--frame_num",
         type=int,
         default=None,
-        help="How many frames to sample from a image or video. The number should be 4n+1"
+        help="How many frames to sample from a image or video. The number should be 4n+1",
     )
     parser.add_argument(
         "--ckpt_dir",
         type=str,
         default=None,
-        help="The path to the checkpoint directory.")
+        help="The path to the checkpoint directory.",
+    )
     parser.add_argument(
         "--offload_model",
         type=str2bool,
         default=None,
-        help="Whether to offload the model to CPU after each model forward, reducing GPU memory usage."
+        help="Whether to offload the model to CPU after each model forward, reducing GPU memory usage.",
     )
     parser.add_argument(
         "--ulysses_size",
         type=int,
         default=1,
-        help="The size of the ulysses parallelism in DiT.")
+        help="The size of the ulysses parallelism in DiT.",
+    )
     parser.add_argument(
         "--ring_size",
         type=int,
         default=1,
-        help="The size of the ring attention parallelism in DiT.")
+        help="The size of the ring attention parallelism in DiT.",
+    )
     parser.add_argument(
         "--t5_fsdp",
         action="store_true",
         default=False,
-        help="Whether to use FSDP for T5.")
+        help="Whether to use FSDP for T5.",
+    )
     parser.add_argument(
         "--t5_cpu",
         action="store_true",
         default=False,
-        help="Whether to place T5 model on CPU.")
+        help="Whether to place T5 model on CPU.",
+    )
     parser.add_argument(
         "--dit_fsdp",
         action="store_true",
         default=False,
-        help="Whether to use FSDP for DiT.")
+        help="Whether to use FSDP for DiT.",
+    )
     parser.add_argument(
         "--save_file",
         type=str,
         default=None,
-        help="The file to save the generated image or video to.")
+        help="The file to save the generated image or video to.",
+    )
     parser.add_argument(
         "--prompt",
         type=str,
         default=None,
-        help="The prompt to generate the image or video from.")
+        help="The prompt to generate the image or video from.",
+    )
     parser.add_argument(
         "--use_prompt_extend",
         action="store_true",
         default=False,
-        help="Whether to use prompt extend.")
+        help="Whether to use prompt extend.",
+    )
     parser.add_argument(
         "--prompt_extend_method",
         type=str,
         default="local_qwen",
         choices=["dashscope", "local_qwen"],
-        help="The prompt extend method to use.")
+        help="The prompt extend method to use.",
+    )
     parser.add_argument(
         "--prompt_extend_model",
         type=str,
         default=None,
-        help="The prompt extend model to use.")
+        help="The prompt extend model to use.",
+    )
     parser.add_argument(
         "--prompt_extend_target_lang",
         type=str,
         default="zh",
         choices=["zh", "en"],
-        help="The target language of prompt extend.")
+        help="The target language of prompt extend.",
+    )
     parser.add_argument(
         "--base_seed",
         type=int,
         default=-1,
-        help="The seed to use for generating the image or video.")
+        help="The seed to use for generating the image or video.",
+    )
     parser.add_argument(
-        "--image",
-        type=str,
-        default=None,
-        help="The image to generate the video from.")
+        "--image", type=str, default=None, help="The image to generate the video from."
+    )
     parser.add_argument(
         "--sample_solver",
         type=str,
-        default='unipc',
-        choices=['unipc', 'dpm++'],
-        help="The solver used to sample.")
+        default="unipc",
+        choices=["unipc", "dpm++"],
+        help="The solver used to sample.",
+    )
     parser.add_argument(
-        "--sample_steps", type=int, default=None, help="The sampling steps.")
+        "--sample_steps", type=int, default=None, help="The sampling steps."
+    )
     parser.add_argument(
         "--sample_shift",
         type=float,
         default=None,
-        help="Sampling shift factor for flow matching schedulers.")
+        help="Sampling shift factor for flow matching schedulers.",
+    )
     parser.add_argument(
         "--sample_guide_scale",
         type=float,
         default=5.0,
-        help="Classifier free guidance scale.")
+        help="Classifier free guidance scale.",
+    )
     parser.add_argument(
         "--device",
         type=str,
         default=None,
-        help="Device to use for computation (mps, cpu).")
+        help="Device to use for computation (mps, cpu).",
+    )
 
     args = parser.parse_args()
 
@@ -206,7 +229,8 @@ def _init_logging(rank):
         logging.basicConfig(
             level=logging.INFO,
             format="[%(asctime)s] %(levelname)s: %(message)s",
-            handlers=[logging.StreamHandler(stream=sys.stdout)])
+            handlers=[logging.StreamHandler(stream=sys.stdout)],
+        )
     else:
         logging.basicConfig(level=logging.ERROR)
 
@@ -217,29 +241,31 @@ def generate(args):
         device = torch.device(args.device)
     else:
         device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    
+
     _init_logging(0)  # Use rank 0 logging for single-device
-    
+
     # Ensure all torch operations use this device
     torch.set_default_device(device)
-    
+
     if args.offload_model is None:
         args.offload_model = True  # Default to True for single device to save memory
-        logging.info(
-            f"offload_model is not specified, set to {args.offload_model}.")
+        logging.info(f"offload_model is not specified, set to {args.offload_model}.")
 
     if args.use_prompt_extend:
         if args.prompt_extend_method == "dashscope":
             prompt_expander = DashScopePromptExpander(
-                model_name=args.prompt_extend_model, is_vl="i2v" in args.task)
+                model_name=args.prompt_extend_model, is_vl="i2v" in args.task
+            )
         elif args.prompt_extend_method == "local_qwen":
             prompt_expander = QwenPromptExpander(
                 model_name=args.prompt_extend_model,
                 is_vl="i2v" in args.task,
-                device=device)  # Use MPS/CPU device instead of rank
+                device=device,
+            )  # Use MPS/CPU device instead of rank
         else:
             raise NotImplementedError(
-                f"Unsupport prompt_extend_method: {args.prompt_extend_method}")
+                f"Unsupport prompt_extend_method: {args.prompt_extend_method}"
+            )
 
     cfg = WAN_CONFIGS[args.task]
     logging.info(f"Generation job args: {args}")
@@ -254,10 +280,10 @@ def generate(args):
             prompt_output = prompt_expander(
                 args.prompt,
                 tar_lang=args.prompt_extend_target_lang,
-                seed=args.base_seed)
+                seed=args.base_seed,
+            )
             if prompt_output.status == False:
-                logging.info(
-                    f"Extending prompt failed: {prompt_output.message}")
+                logging.info(f"Extending prompt failed: {prompt_output.message}")
                 logging.info("Falling back to original prompt.")
                 input_prompt = args.prompt
             else:
@@ -277,8 +303,7 @@ def generate(args):
             t5_cpu=args.t5_cpu,
         )
 
-        logging.info(
-            f"Generating {'image' if 't2i' in args.task else 'video'} ...")
+        logging.info(f"Generating {'image' if 't2i' in args.task else 'video'} ...")
         video = wan_t2v.generate(
             args.prompt,
             size=SIZE_CONFIGS[args.size],
@@ -288,7 +313,9 @@ def generate(args):
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model)
+            offload_model=args.offload_model,
+            VAE_tile_size=args.tile_size,
+        )
 
     else:
         if args.prompt is None:
@@ -305,10 +332,10 @@ def generate(args):
                 args.prompt,
                 tar_lang=args.prompt_extend_target_lang,
                 image=img,
-                seed=args.base_seed)
+                seed=args.base_seed,
+            )
             if prompt_output.status == False:
-                logging.info(
-                    f"Extending prompt failed: {prompt_output.message}")
+                logging.info(f"Extending prompt failed: {prompt_output.message}")
                 logging.info("Falling back to original prompt.")
                 input_prompt = args.prompt
             else:
@@ -339,22 +366,25 @@ def generate(args):
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model)
+            offload_model=args.offload_model,
+        )
 
-    # Save output 
+    # Save output
     if args.save_file is None:
         formatted_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         formatted_prompt = args.prompt.replace(" ", "_").replace("/", "_")[:50]
-        suffix = '.png' if "t2i" in args.task else '.mp4'
+        suffix = ".png" if "t2i" in args.task else ".mp4"
         # Use Windows-compatible path if needed and include ulysses/ring parameters for distributed cases
-        if sys.platform == 'win32':
-            size_str = args.size.replace('*', 'x')
+        if sys.platform == "win32":
+            size_str = args.size.replace("*", "x")
         else:
             size_str = args.size
-            
+
         # Single device (MPS/CPU) doesn't use ulysses/ring parallelism
         if args.device and (args.device == "mps" or args.device == "cpu"):
-            args.save_file = f"{args.task}_{size_str}_{formatted_prompt}_{formatted_time}{suffix}"
+            args.save_file = (
+                f"{args.task}_{size_str}_{formatted_prompt}_{formatted_time}{suffix}"
+            )
         else:
             # Include parallelism parameters for distributed cases
             args.save_file = f"{args.task}_{size_str}_{args.ulysses_size}_{args.ring_size}_{formatted_prompt}_{formatted_time}{suffix}"
@@ -366,7 +396,8 @@ def generate(args):
             save_file=args.save_file,
             nrow=1,
             normalize=True,
-            value_range=(-1, 1))
+            value_range=(-1, 1),
+        )
     else:
         logging.info(f"Saving generated video to {args.save_file}")
         cache_video(
@@ -375,7 +406,8 @@ def generate(args):
             fps=cfg.sample_fps,
             nrow=1,
             normalize=True,
-            value_range=(-1, 1))
+            value_range=(-1, 1),
+        )
     logging.info("Finished.")
 
     if "t2i" in args.task:
@@ -385,7 +417,8 @@ def generate(args):
             save_file=args.save_file,
             nrow=1,
             normalize=True,
-            value_range=(-1, 1))
+            value_range=(-1, 1),
+        )
     else:
         logging.info(f"Saving generated video to {args.save_file}")
         cache_video(
@@ -394,8 +427,10 @@ def generate(args):
             fps=cfg.sample_fps,
             nrow=1,
             normalize=True,
-            value_range=(-1, 1))
+            value_range=(-1, 1),
+        )
     logging.info("Finished.")
+
 
 if __name__ == "__main__":
     args = _parse_args()

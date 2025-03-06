@@ -12,6 +12,7 @@ The original repo also loads all models at startup, which takes a lot of memory.
 
 - Load models only when needed. (T5, base model, and vae)
 - Modify the offload_model method to delete the model from memory immediately after use.
+- Add VAE tiling to reduce memory usage. From [deepbeepmeep/Wan2GP](https://github.com/deepbeepmeep/Wan2GP)
 
 ## Usage
 
@@ -19,10 +20,10 @@ To generate a video, use the following command:
 
 ```bash
 export PYTORCH_ENABLE_MPS_FALLBACK=1
-python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --ckpt_dir ../Wan2.1-T2V-1.3B --offload_model True --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
+python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --tile_size 128 --ckpt_dir ../Wan2.1-T2V-1.3B --offload_model True --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
 ```
 
-A 32GB M4 Mac Mini can run the above command. T5 and VAE model is still needs swap, but the video generation stage only uses about 16GB of RAM. Time taken: 19m15s.
+A 32GB M4 Mac Mini can run the above command. T5 model is still needs swap, but the video generation stage only uses about 16GB of RAM, VAE uses about 5GB. Time taken: 20m3s.
 
 For ```--frame_num 25 --sample_steps 50```, time taken is approx 5h.
 

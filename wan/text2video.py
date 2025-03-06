@@ -108,6 +108,7 @@ class WanT2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
+        VAE_tile_size=None,
     ):
         r"""
         Generates video frames from text prompt using diffusion process.
@@ -282,7 +283,7 @@ class WanT2V:
                     ),
                     device=self.device,
                 )
-                videos = self.vae.decode(x0)
+                videos = self.vae.decode(x0, tile_size=VAE_tile_size)
 
         del noise, latents
         del sample_scheduler
