@@ -25,7 +25,7 @@ python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_step
 
 A 32GB M4 Mac Mini can run the above command. T5 model is still needs swap, but the video generation stage only uses about 16GB of RAM, VAE uses about 5GB. Time taken: 20m3s.
 
-For ```--frame_num 25 --sample_steps 50```, time taken is approx 5h.
+For ```--frame_num 25 --sample_steps 50 --tile_size 256```, time taken: 56m.
 
 ## Following are upstream readmes
 
