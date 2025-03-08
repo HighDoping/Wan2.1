@@ -28,9 +28,16 @@ In this repository, we present **Wan2.1**, a comprehensive and open suite of vid
 
 ## 🔥 Latest News
 
-- Mar 3, 2025: 👋 Wan2.1's T2V and I2V have been integrated into Diffusers ([T2V](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/wan/pipeline_wan.py) | [I2V](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/wan/pipeline_wan_i2v.py)). Feel free to give it a try!
-- Feb 27, 2025: 👋 Wan2.1 has been integrated into [ComfyUI](https://comfyanonymous.github.io/ComfyUI_examples/wan/). Enjoy!
-- Feb 25, 2025: 👋 We've released the inference code and weights of Wan2.1.
+- Mar 3, 2025: 👋 **Wan2.1**'s T2V and I2V have been integrated into Diffusers ([T2V](https://huggingface.co/docs/diffusers/main/en/api/pipelines/wan#diffusers.WanPipeline) | [I2V](https://huggingface.co/docs/diffusers/main/en/api/pipelines/wan#diffusers.WanImageToVideoPipeline)). Feel free to give it a try!
+- Feb 27, 2025: 👋 **Wan2.1** has been integrated into [ComfyUI](https://comfyanonymous.github.io/ComfyUI_examples/wan/). Enjoy!
+- Feb 25, 2025: 👋 We've released the inference code and weights of **Wan2.1**.
+
+## Community Works
+
+If your work has improved **Wan2.1** and you would like more people to see it, please inform us.
+
+- [TeaCache](https://github.com/ali-vilab/TeaCache) now supports **Wan2.1** acceleration, capable of increasing speed by approximately 2x. Feel free to give it a try!
+- [DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio) provides more support for **Wan2.1**, including video-to-video, FP8 quantization, VRAM optimization, LoRA training, and more. Please refer to [their examples](https://github.com/modelscope/DiffSynth-Studio/tree/main/examples/wanvideo).
 
 ## 📑 Todo List
 
@@ -291,20 +298,27 @@ You can easily inference **Wan2.1**-I2V using Diffusers with the following comma
 
 ``` python
 import torch
+import numpy as np
 from diffusers import AutoencoderKLWan, WanImageToVideoPipeline
 from diffusers.utils import export_to_video, load_image
+from transformers import CLIPVisionModel
 
 # Available models: Wan-AI/Wan2.1-I2V-14B-480P-Diffusers, Wan-AI/Wan2.1-I2V-14B-720P-Diffusers
 model_id = "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers"
+image_encoder = CLIPVisionModel.from_pretrained(model_id, subfolder="image_encoder", torch_dtype=torch.float32)
 vae = AutoencoderKLWan.from_pretrained(model_id, subfolder="vae", torch_dtype=torch.float32)
-pipe = WanImageToVideoPipeline.from_pretrained(model_id, vae=vae, torch_dtype=torch.bfloat16)
+pipe = WanImageToVideoPipeline.from_pretrained(model_id, vae=vae, image_encoder=image_encoder, torch_dtype=torch.bfloat16)
 pipe.to("cuda")
 
-max_area = 720 * 1280
-height, width = 720, 1280
 image = load_image(
     "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/astronaut.jpg"
 )
+max_area = 720 * 1280
+aspect_ratio = image.height / image.width
+mod_value = pipe.vae_scale_factor_spatial * pipe.transformer.config.patch_size[1]
+height = round(np.sqrt(max_area * aspect_ratio)) // mod_value * mod_value
+width = round(np.sqrt(max_area / aspect_ratio)) // mod_value * mod_value
+image = image.resize((width, height))
 prompt = (
     "An astronaut hatching from an egg, on the surface of the moon, the darkness and depth of space realised in "
     "the background. High quality, ultrarealistic detail and breath-taking movie-like camera shot."
@@ -312,9 +326,15 @@ prompt = (
 negative_prompt = "Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards"
 
 output = pipe(
-    image=image, prompt=prompt, max_area=max_area, negative_prompt=negative_prompt, num_frames=81, guidance_scale=5.0
+    image=image, 
+    prompt=prompt, 
+    negative_prompt=negative_prompt, 
+    height=height, width=width, 
+    num_frames=81, 
+    guidance_scale=5.0
 ).frames[0]
 export_to_video(output, "output.mp4", fps=16)
+
 ```
 
 > 💡Note: Please note that this example does not integrate Prompt Extension and distributed inference. We will soon update with the integrated prompt extension and multi-GPU version of Diffusers.
@@ -398,10 +418,6 @@ We test the computational efficiency of different **Wan2.1** models on different
 > (4) For all testings, no prompt extension was applied, meaning `--use_prompt_extend` was not enabled.
 
 > 💡Note: T2V-14B is slower than I2V-14B because the former samples 50 steps while the latter uses 40 steps.
-
-## Community Contributions
-
-- [DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio) provides more support for **Wan2.1**, including video-to-video, FP8 quantization, VRAM optimization, LoRA training, and more. Please refer to [their examples](https://github.com/modelscope/DiffSynth-Studio/tree/main/examples/wanvideo).
 
 -------
 
