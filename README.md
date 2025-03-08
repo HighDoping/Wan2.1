@@ -16,11 +16,19 @@ The original repo also loads all models at startup, which takes a lot of memory.
 
 ## Usage
 
+Follow the upstream instructions to install the dependencies and download the model.
+
+Assuming you have Poetry installed, you can also install the dependencies with:
+
+```bash
+poetry install
+```
+
 To generate a video, use the following command:
 
 ```bash
 export PYTORCH_ENABLE_MPS_FALLBACK=1
-python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --tile_size 128 --ckpt_dir ../Wan2.1-T2V-1.3B --offload_model True --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
+python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --tile_size 128 --ckpt_dir ./Wan2.1-T2V-1.3B --offload_model True --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
 ```
 
 A 32GB M4 Mac Mini can run the above command. T5 model is still needs swap, but the video generation stage only uses about 16GB of RAM, VAE uses about 5GB. Time taken: 20m3s.
