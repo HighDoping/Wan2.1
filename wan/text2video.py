@@ -169,6 +169,7 @@ class WanT2V:
         seed_g = torch.Generator(device=self.device)
         seed_g.manual_seed(seed)
 
+        logging.info("Loading text encoder model.")
         self.text_encoder = T5EncoderModel(
             text_len=self.config.text_len,
             dtype=self.config.t5_dtype,
@@ -191,8 +192,10 @@ class WanT2V:
             context_null = [t.to(self.device) for t in context_null]
         if offload_model:
             del self.text_encoder
+            logging.info("Remove text encoder model.")
             clear_cache()
 
+        logging.info("Loading WanModel")
         self.model = WanModel.from_pretrained(self.checkpoint_dir)
         self.model.eval().requires_grad_(False)
         self.model.to(self.device)
@@ -246,6 +249,7 @@ class WanT2V:
             arg_c = {"context": context, "seq_len": seq_len}
             arg_null = {"context": context_null, "seq_len": seq_len}
 
+            logging.info("Start generation loop.")
             for _, t in enumerate(tqdm(timesteps)):
                 latent_model_input = latents
                 timestep = [t]
@@ -270,19 +274,23 @@ class WanT2V:
                     generator=seed_g,
                 )[0]
                 latents = [temp_x0.squeeze(0)]
+            logging.info("End generation loop.")
 
             x0 = latents
             if offload_model:
                 del self.model
+                logging.info("Remove WanModel.")
                 clear_cache()
 
             if self.rank == 0:
+                logging.info("Loading VAE model.")
                 self.vae = WanVAE(
                     vae_pth=os.path.join(
                         self.checkpoint_dir, self.config.vae_checkpoint
                     ),
                     device=self.device,
                 )
+                logging.info("Decoding video frames.")
                 videos = self.vae.decode(x0, tile_size=VAE_tile_size)
 
         del noise, latents
