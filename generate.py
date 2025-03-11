@@ -367,6 +367,7 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
+            VAE_tile_size=args.tile_size,
         )
 
     # Save output

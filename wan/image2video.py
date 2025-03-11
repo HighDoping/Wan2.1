@@ -115,6 +115,7 @@ class WanI2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
+        VAE_tile_size=None,
     ):
         r"""
         Generates video frames from input image and text prompt using diffusion process.
@@ -183,10 +184,9 @@ class WanI2V:
         seed = seed if seed >= 0 else random.randint(0, sys.maxsize)
         seed_g = torch.Generator(device=self.device)
         seed_g.manual_seed(seed)
-
         noise = torch.randn(
             16,
-            21,
+            int((frame_num - 1) / 4 + 1),  # 21,
             lat_h,
             lat_w,
             dtype=torch.float32,
@@ -194,7 +194,7 @@ class WanI2V:
             device=self.device,
         )
 
-        msk = torch.ones(1, 81, lat_h, lat_w, device=self.device)
+        msk = torch.ones(1, frame_num, lat_h, lat_w, device=self.device)
         msk[:, 1:] = 0
         msk = torch.concat(
             [torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]], dim=1
@@ -263,11 +263,12 @@ class WanI2V:
                         torch.nn.functional.interpolate(
                             img[None], size=(h, w), mode="bicubic"
                         ).transpose(0, 1),
-                        torch.zeros(3, 80, h, w),
+                        torch.zeros(3, frame_num - 1, h, w),
                     ],
                     dim=1,
                 ).to(self.device)
-            ]
+            ],
+            VAE_tile_size,
         )[0]
         if offload_model:
             del self.vae
@@ -381,7 +382,7 @@ class WanI2V:
                     device=self.device,
                 )
                 logging.info("Decoding video.")
-                videos = self.vae.decode(x0)
+                videos = self.vae.decode(x0, VAE_tile_size)
 
         del noise, latent
         del sample_scheduler
