@@ -205,6 +205,7 @@ class WanI2V:
         if n_prompt == "":
             n_prompt = self.sample_neg_prompt
 
+        logging.info("Loading text encoder model.")
         self.text_encoder = T5EncoderModel(
             text_len=self.config.text_len,
             dtype=self.config.t5_dtype,
@@ -228,8 +229,10 @@ class WanI2V:
             context_null = [t.to(self.device) for t in context_null]
         if offload_model:
             del self.text_encoder
+            logging.info("Remove text encoder model.")
             clear_cache()
 
+        logging.info("Loading CLIP model.")
         self.clip = CLIPModel(
             dtype=self.config.clip_dtype,
             device=self.device,
@@ -244,12 +247,15 @@ class WanI2V:
         clip_context = self.clip.visual([img[:, None, :, :]])
         if offload_model:
             del self.clip
+            logging.info("Remove CLIP model.")
             clear_cache()
 
+        logging.info("Loading VAE model.")
         self.vae = WanVAE(
             vae_pth=os.path.join(self.checkpoint_dir, self.config.vae_checkpoint),
             device=self.device,
         )
+        logging.info("Encoding image.")
         y = self.vae.encode(
             [
                 torch.concat(
@@ -265,9 +271,11 @@ class WanI2V:
         )[0]
         if offload_model:
             del self.vae
+            logging.info("Remove VAE model.")
             clear_cache()
         y = torch.concat([msk, y])
 
+        logging.info("Loading WanModel")
         self.model = WanModel.from_pretrained(self.checkpoint_dir)
         self.model.eval().requires_grad_(False)
         self.model.to(self.device)
@@ -323,7 +331,7 @@ class WanI2V:
             if offload_model:
                 clear_cache()
 
-            self.model.to(self.device)
+            logging.info("Start generation loop.")
             for _, t in enumerate(tqdm(timesteps)):
                 latent_model_input = [latent.to(self.device)]
                 timestep = [t]
@@ -357,18 +365,22 @@ class WanI2V:
 
                 x0 = [latent.to(self.device)]
                 del latent_model_input, timestep
+            logging.info("End generation loop.")
 
             if offload_model:
                 del self.model
+                logging.info("Remove WanModel.")
                 clear_cache()
 
             if self.rank == 0:
+                logging.info("Loading VAE model.")
                 self.vae = WanVAE(
                     vae_pth=os.path.join(
                         self.checkpoint_dir, self.config.vae_checkpoint
                     ),
                     device=self.device,
                 )
+                logging.info("Decoding video.")
                 videos = self.vae.decode(x0)
 
         del noise, latent
