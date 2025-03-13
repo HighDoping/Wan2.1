@@ -19,7 +19,6 @@ from tqdm import tqdm
 from .distributed.fsdp import shard_model
 from .modules.clip import CLIPModel
 from .modules.model import WanModel
-from .modules.t5 import T5EncoderModel
 from .modules.vae import WanVAE
 from .utils.fm_solvers import (
     FlowDPMSolverMultistepScheduler,
@@ -48,6 +47,7 @@ class WanI2V:
         dit_fsdp=False,
         use_usp=False,
         t5_cpu=False,
+        t5_quant=False,
         init_on_cpu=True,
     ):
         r"""
@@ -89,6 +89,7 @@ class WanI2V:
         self.rank = rank
         self.t5_cpu = t5_cpu
         self.t5_fsdp = t5_fsdp
+        self.t5_quant=t5_quant
 
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
@@ -206,16 +207,51 @@ class WanI2V:
             n_prompt = self.sample_neg_prompt
 
         logging.info("Loading text encoder model.")
-        self.text_encoder = T5EncoderModel(
-            text_len=self.config.text_len,
-            dtype=self.config.t5_dtype,
-            device=torch.device("cpu"),
-            checkpoint_path=os.path.join(
-                self.checkpoint_dir, self.config.t5_checkpoint
-            ),
-            tokenizer_path=os.path.join(self.checkpoint_dir, self.config.t5_tokenizer),
-            shard_fn=None,
-        )
+        if self.t5_quant:
+            from .modules.t5_gguf import run_llama_embedding
+
+            checkpoint_path = os.path.join(
+                self.checkpoint_dir, self.config.t5_quant_checkpoint
+            )
+            context = [
+                torch.from_numpy(run_llama_embedding(checkpoint_path, input_prompt)).to(
+                    self.device
+                )
+            ]
+            context_null = [
+                torch.from_numpy(run_llama_embedding(checkpoint_path, n_prompt)).to(
+                    self.device
+                )
+            ]
+        else:
+            from .modules.t5 import T5EncoderModel
+
+            self.text_encoder = T5EncoderModel(
+                text_len=self.config.text_len,
+                dtype=self.config.t5_dtype,
+                device=torch.device("cpu"),
+                checkpoint_path=os.path.join(
+                    self.checkpoint_dir, self.config.t5_checkpoint
+                ),
+                tokenizer_path=os.path.join(
+                    self.checkpoint_dir, self.config.t5_tokenizer
+                ),
+                shard_fn=None,
+            )
+
+            if not self.t5_cpu:
+                self.text_encoder.model.to(self.device)
+                context = self.text_encoder([input_prompt], self.device)
+                context_null = self.text_encoder([n_prompt], self.device)
+            else:
+                context = self.text_encoder([input_prompt], torch.device("cpu"))
+                context_null = self.text_encoder([n_prompt], torch.device("cpu"))
+                context = [t.to(self.device) for t in context]
+                context_null = [t.to(self.device) for t in context_null]
+            if offload_model:
+                del self.text_encoder
+                logging.info("Remove text encoder model.")
+                clear_cache()
 
         # preprocess
         if not self.t5_cpu:

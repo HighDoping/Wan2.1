@@ -16,7 +16,6 @@ from tqdm import tqdm
 
 from .distributed.fsdp import shard_model
 from .modules.model import WanModel
-from .modules.t5 import T5EncoderModel
 from .modules.vae import WanVAE
 from .utils.fm_solvers import (
     FlowDPMSolverMultistepScheduler,
@@ -45,6 +44,7 @@ class WanT2V:
         dit_fsdp=False,
         use_usp=False,
         t5_cpu=False,
+        t5_quant=False,
     ):
         r"""
         Initializes the Wan text-to-video generation model components.
@@ -83,6 +83,7 @@ class WanT2V:
         self.rank = rank
         self.t5_cpu = t5_cpu
         self.t5_fsdp = t5_fsdp
+        self.t5_quant = t5_quant
 
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
@@ -170,30 +171,51 @@ class WanT2V:
         seed_g.manual_seed(seed)
 
         logging.info("Loading text encoder model.")
-        self.text_encoder = T5EncoderModel(
-            text_len=self.config.text_len,
-            dtype=self.config.t5_dtype,
-            device=torch.device("cpu"),
-            checkpoint_path=os.path.join(
-                self.checkpoint_dir, self.config.t5_checkpoint
-            ),
-            tokenizer_path=os.path.join(self.checkpoint_dir, self.config.t5_tokenizer),
-            shard_fn=None,
-        )
+        if self.t5_quant:
+            from .modules.t5_gguf import run_llama_embedding
 
-        if not self.t5_cpu:
-            self.text_encoder.model.to(self.device)
-            context = self.text_encoder([input_prompt], self.device)
-            context_null = self.text_encoder([n_prompt], self.device)
+            checkpoint_path = os.path.join(
+                self.checkpoint_dir, self.config.t5_quant_checkpoint
+            )
+            context = [
+                torch.from_numpy(run_llama_embedding(checkpoint_path, input_prompt)).to(
+                    self.device
+                )
+            ]
+            context_null = [
+                torch.from_numpy(run_llama_embedding(checkpoint_path, n_prompt)).to(
+                    self.device
+                )
+            ]
         else:
-            context = self.text_encoder([input_prompt], torch.device("cpu"))
-            context_null = self.text_encoder([n_prompt], torch.device("cpu"))
-            context = [t.to(self.device) for t in context]
-            context_null = [t.to(self.device) for t in context_null]
-        if offload_model:
-            del self.text_encoder
-            logging.info("Remove text encoder model.")
-            clear_cache()
+            from .modules.t5 import T5EncoderModel
+
+            self.text_encoder = T5EncoderModel(
+                text_len=self.config.text_len,
+                dtype=self.config.t5_dtype,
+                device=torch.device("cpu"),
+                checkpoint_path=os.path.join(
+                    self.checkpoint_dir, self.config.t5_checkpoint
+                ),
+                tokenizer_path=os.path.join(
+                    self.checkpoint_dir, self.config.t5_tokenizer
+                ),
+                shard_fn=None,
+            )
+
+            if not self.t5_cpu:
+                self.text_encoder.model.to(self.device)
+                context = self.text_encoder([input_prompt], self.device)
+                context_null = self.text_encoder([n_prompt], self.device)
+            else:
+                context = self.text_encoder([input_prompt], torch.device("cpu"))
+                context_null = self.text_encoder([n_prompt], torch.device("cpu"))
+                context = [t.to(self.device) for t in context]
+                context_null = [t.to(self.device) for t in context_null]
+            if offload_model:
+                del self.text_encoder
+                logging.info("Remove text encoder model.")
+                clear_cache()
 
         logging.info("Loading WanModel")
         self.model = WanModel.from_pretrained(self.checkpoint_dir)
@@ -252,11 +274,14 @@ class WanT2V:
             logging.info("Start generation loop.")
             for _, t in enumerate(tqdm(timesteps)):
                 latent_model_input = latents
+                latent = latents[0]
+                if offload_model:
+                    del latents
+                    clear_cache()
                 timestep = [t]
 
                 timestep = torch.stack(timestep)
 
-                self.model.to(self.device)
                 noise_pred_cond = self.model(latent_model_input, t=timestep, **arg_c)[0]
                 noise_pred_uncond = self.model(
                     latent_model_input, t=timestep, **arg_null
@@ -269,11 +294,15 @@ class WanT2V:
                 temp_x0 = sample_scheduler.step(
                     noise_pred.unsqueeze(0),
                     t,
-                    latents[0].unsqueeze(0),
+                    latent.unsqueeze(0),
                     return_dict=False,
                     generator=seed_g,
                 )[0]
                 latents = [temp_x0.squeeze(0)]
+                if offload_model:
+                    del noise_pred, noise_pred_cond, noise_pred_uncond, temp_x0
+                    clear_cache()
+
             logging.info("End generation loop.")
 
             x0 = latents

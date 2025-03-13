@@ -10,6 +10,7 @@ t2v_14B.update(wan_shared_cfg)
 
 # t5
 t2v_14B.t5_checkpoint = 'models_t5_umt5-xxl-enc-bf16.pth'
+t2v_14B.t5_quant_checkpoint = "umt5-xxl-encode-only-Q4_K_M.gguf"
 t2v_14B.t5_tokenizer = 'google/umt5-xxl'
 
 # vae

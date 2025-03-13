@@ -134,6 +134,12 @@ def _parse_args():
         help="Whether to place T5 model on CPU.",
     )
     parser.add_argument(
+        "--t5_quant",
+        action="store_true",
+        default=False,
+        help="Whether to use quantized T5 model.",
+    )
+    parser.add_argument(
         "--dit_fsdp",
         action="store_true",
         default=False,
@@ -301,6 +307,7 @@ def generate(args):
             dit_fsdp=False,  # Disable FSDP (not supported on MPS)
             use_usp=False,  # Disable Ulysses/ring parallelism (single device)
             t5_cpu=args.t5_cpu,
+            t5_quant=args.t5_quant,
         )
 
         logging.info(f"Generating {'image' if 't2i' in args.task else 'video'} ...")
@@ -353,6 +360,7 @@ def generate(args):
             dit_fsdp=False,  # Disable FSDP (not supported on MPS)
             use_usp=False,  # Disable Ulysses/ring parallelism (single device)
             t5_cpu=args.t5_cpu,
+            t5_quant=args.t5_quant,
         )
 
         logging.info("Generating video ...")
