@@ -25,7 +25,7 @@ Assuming you have Poetry installed, you can also install the dependencies with:
 poetry install
 ```
 
-To use quantized T5 model, download it from my [🤗 repo](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf/resolve/main/umt5-xxl-encode-only-Q4_K_M.gguf) or use huggingface-cli and put it in the same folder as wan model:
+To use quantized T5 model, [download it](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf/resolve/main/umt5-xxl-encode-only-Q4_K_M.gguf) from my [🤗 repo](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf) or use huggingface-cli and put it in the same folder as wan model:
 
 ```bash
 huggingface-cli download HighDoping/umt5-xxl-encode-gguf --local-dir ./Wan2.1-T2V-1.3B
