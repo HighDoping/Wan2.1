@@ -545,6 +545,8 @@ The models in this repository are licensed under the Apache 2.0 License. We clai
 
 ## Acknowledgements
 
+We would like to thank the contributors to the [SD3](https://huggingface.co/stabilityai/stable-diffusion-3-medium), [Qwen](https://huggingface.co/Qwen), [umt5-xxl](https://huggingface.co/google/umt5-xxl), [diffusers](https://github.com/huggingface/diffusers) and [HuggingFace](https://huggingface.co) repositories, for their open research.
+
 ## Optimization Tips
 
 - **Use CPU for Large Models**: If you encounter memory issues, use `--device cpu`.
