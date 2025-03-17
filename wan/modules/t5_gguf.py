@@ -5,7 +5,7 @@ import subprocess
 import numpy as np
 
 
-def run_llama_embedding(checkpoint_path, prompt):
+def run_llama_embedding(checkpoint_path, prompt:str)->np.ndarray:
     cmd = f'llama-embedding -m {checkpoint_path} -p "{prompt}" --pooling none --embd-normalize -1 --no-warmup --batch-size 512 --ctx-size 512 --embd-output-format array'
     logging.info(f"Running llama.cpp: {cmd}")
     result = subprocess.run(

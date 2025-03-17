@@ -25,11 +25,23 @@ Assuming you have Poetry installed, you can also install the dependencies with:
 poetry install
 ```
 
+Download the model with huggingface-cli or modelscope:
+
+```bash
+huggingface-cli download Wan-AI/Wan2.1-T2V-14B --local-dir ./Wan2.1-T2V-14B
+```
+
+```bash
+modelscope download Wan-AI/Wan2.1-T2V-14B --local_dir ./Wan2.1-T2V-14B
+```
+
 To use quantized T5 model, [download it](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf/resolve/main/umt5-xxl-encode-only-Q4_K_M.gguf) from my [🤗 repo](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf) or use huggingface-cli and put it in the same folder as wan model:
 
 ```bash
 huggingface-cli download HighDoping/umt5-xxl-encode-gguf --local-dir ./Wan2.1-T2V-1.3B
 ```
+
+[Models from city96](https://huggingface.co/city96/umt5-xxl-encoder-gguf) also works. Only needs to change the model name in ```wan\configs```
 
 Then install llama.cpp from homebrew:
 
