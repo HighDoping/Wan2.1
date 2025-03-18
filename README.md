@@ -54,10 +54,12 @@ To generate a video, use the following command:
 
 ```bash
 export PYTORCH_ENABLE_MPS_FALLBACK=1
-python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --tile_size 256 --ckpt_dir ../Wan2.1-T2V-1.3B --offload_model True --t5_quant --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
+python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --tile_size 256 --ckpt_dir ../Wan2.1-T2V-1.3B --offload_model True --t5_quant --device mps --sample_shift 8 --sample_guide_scale 6 --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
 ```
 
 For 32GB M4 Mac Mini, everything runs without swap, Video generation takes about 10GB and VAE uses about 12GB. Time taken: 12m14s.
+
+For ```--frame_num 45 --sample_steps 50 --tile_size 128```, time taken: 1h23m.
 
 Without quantized T5 model and mixed precision:
 
