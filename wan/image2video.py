@@ -11,7 +11,7 @@ from functools import partial
 
 import numpy as np
 import torch
-import torch.cuda.amp as amp
+import torch.amp as amp
 import torch.distributed as dist
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
@@ -324,7 +324,11 @@ class WanI2V:
         no_sync = getattr(self.model, "no_sync", noop_no_sync)
 
         # evaluation mode
-        with amp.autocast(dtype=self.param_dtype), torch.no_grad(), no_sync():
+        with (
+            amp.autocast(device_type=self.device, dtype=self.param_dtype),
+            torch.no_grad(),
+            no_sync(),
+        ):
             if sample_solver == "unipc":
                 sample_scheduler = FlowUniPCMultistepScheduler(
                     num_train_timesteps=self.num_train_timesteps,

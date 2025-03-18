@@ -1,20 +1,30 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
+import gc
 import logging
 
-import gc
-
 import torch
-import torch.cuda.amp as amp
+import torch.amp as amp
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-
 
 __all__ = [
     "WanVAE",
 ]
 
 CACHE_T = 2
+
+
+def get_device():
+    if torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
+
+
+device = get_device()
 
 
 def clear_cache():
@@ -820,7 +830,7 @@ class WanVAE:
         z_dim=16,
         vae_pth="cache/vae_step_411000.pth",
         dtype=torch.float,
-        device="cuda",
+        device="mps",
     ):
         self.dtype = dtype
         self.device = device
@@ -880,7 +890,7 @@ class WanVAE:
         """
         videos: A list of videos each with shape [C, T, H, W].
         """
-        with amp.autocast(dtype=self.dtype):
+        with amp.autocast(device_type=device, dtype=self.dtype):
             if tile_size > 0:
                 return [
                     self.model.spatial_tiled_encode(
@@ -897,7 +907,7 @@ class WanVAE:
                 ]
 
     def decode(self, zs, tile_size):
-        with amp.autocast(dtype=self.dtype):
+        with amp.autocast(device_type=device, dtype=self.dtype):
             if tile_size > 0:
                 return [
                     self.model.spatial_tiled_decode(

@@ -14,6 +14,7 @@ The original repo also loads all models at startup, which takes a lot of memory.
 - Modify the offload_model method to delete the model from memory immediately after use.
 - Add VAE tiling to reduce memory usage. From [deepbeepmeep/Wan2GP](https://github.com/deepbeepmeep/Wan2GP)
 - Add quantized T5 model to reduce memory usage.
+- Enable mixed precision for MPS, reducing memory usage and increasing speed.
 
 ## Usage
 
@@ -56,9 +57,9 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25 --tile_size 256 --ckpt_dir ../Wan2.1-T2V-1.3B --offload_model True --t5_quant --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
 ```
 
-For 32GB M4 Mac Mini, everything runs without swap. Time taken: 17m.
+For 32GB M4 Mac Mini, everything runs without swap, Video generation takes about 10GB and VAE uses about 12GB. Time taken: 12m14s.
 
-Without quantized T5 model:
+Without quantized T5 model and mixed precision:
 
 ```bash
 export PYTORCH_ENABLE_MPS_FALLBACK=1
