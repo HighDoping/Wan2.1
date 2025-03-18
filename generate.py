@@ -437,27 +437,6 @@ def generate(args):
         )
     logging.info("Finished.")
 
-    if "t2i" in args.task:
-        logging.info(f"Saving generated image to {args.save_file}")
-        cache_image(
-            tensor=video.squeeze(1)[None],
-            save_file=args.save_file,
-            nrow=1,
-            normalize=True,
-            value_range=(-1, 1),
-        )
-    else:
-        logging.info(f"Saving generated video to {args.save_file}")
-        cache_video(
-            tensor=video[None],
-            save_file=args.save_file,
-            fps=cfg.sample_fps,
-            nrow=1,
-            normalize=True,
-            value_range=(-1, 1),
-        )
-    logging.info("Finished.")
-
 
 if __name__ == "__main__":
     args = _parse_args()
