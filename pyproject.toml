@@ -1,37 +1,60 @@
 [project]
-name = "wan2-1-mac"
-version = "0.1.0"
-description = ""
+name = "wan"
+version = "2.1.0"
+description = "Wan2.1 for Mac."
 authors = [
-    {name = "HighDoping",email = "HighDoping@gmail.com"}
+    { name = "Wan Team",email = "wan.ai@alibabacloud.com"},
+    { name = "Bakhtiyor Sulaymonov",email = "bakhti.ai.uz@gmail.com"},
+    { name = "HighDoping",email = "HighDoping@gmail.com"}
 ]
+license = { file = "LICENSE.txt" }
 readme = "README.md"
 requires-python = ">=3.10,<4.0"
 dependencies = [
-    "einops (>=0.8.1,<0.9.0)",
-    "torch (>=2.4.0)",
-    "torchvision (>=0.19.0)",
-    "opencv-python (>=4.9.0.80)",
-    "diffusers (>=0.31.0)",
-    "transformers (>=4.49.0)",
-    "tokenizers (>=0.20.3)",
-    "accelerate (>=1.1.1)",
-    "tqdm (>=4.67.1,<5.0.0)",
-    "imageio (>=2.37.0,<3.0.0)",
-    "easydict (>=1.13,<2.0)",
-    "ftfy (>=6.3.1,<7.0.0)",
-    "dashscope (>=1.22.1,<2.0.0)",
-    "imageio-ffmpeg (>=0.6.0,<0.7.0)",
-    "gradio (>=5.0.0)",
-    "numpy (>=1.23.5,<2)",
-    "modelscope (>=1.23.2,<2.0.0)",
-    "huggingface-hub[cli] (>=0.29.2,<0.30.0)",
+    "torch>=2.4.0",
+    "torchvision>=0.19.0",
+    "opencv-python>=4.9.0.80",
+    "diffusers>=0.31.0",
+    "transformers>=4.49.0",
+    "tokenizers>=0.20.3",
+    "accelerate>=1.1.1",
+    "tqdm",
+    "imageio",
+    "easydict",
+    "ftfy",
+    "dashscope",
+    "imageio-ffmpeg",
+    "gradio>=5.0.0",
+    "numpy>=1.23.5,<2",
+    "einops"
 ]
 
-[tool.poetry]
-packages = [{include = "wan2"}]
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "huggingface-hub[cli]",
+    "modelscope"
+]
 
+[project.urls]
 
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+repository = "https://github.com/Wan-Video/Wan2.1"
+
+[tool.setuptools]
+packages = ["wan"]
+
+[tool.setuptools.package-data]
+"wan" = ["**/*.py"]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+strict = true

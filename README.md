@@ -26,6 +26,12 @@ Assuming you have Poetry installed, you can also install the dependencies with:
 poetry install
 ```
 
+If you want to use hugingface-cli or modelscope, you can install with:
+
+```bash
+poetry install --extras dev
+```
+
 Download the model with huggingface-cli or modelscope:
 
 ```bash
