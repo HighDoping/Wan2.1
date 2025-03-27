@@ -50,7 +50,7 @@ huggingface-cli download HighDoping/umt5-xxl-encode-gguf --local-dir ./Wan2.1-T2
 
 [Models from city96](https://huggingface.co/city96/umt5-xxl-encoder-gguf) also works. Only needs to change the model name in ```wan\configs```
 
-Then install llama.cpp from homebrew: (Note that some versions of llama.cpp don't work well with the T5 model, known good version is build4879, check [issue #2](https://github.com/HighDoping/Wan2.1/issues/2) for workaround)
+Then install llama.cpp from homebrew: (Note llama.cpp version b4882 to b4974 don't support T5Encoder model, check [issue #2](https://github.com/HighDoping/Wan2.1/issues/2) for workaround)
 
 ```bash
 brew install llama.cpp
