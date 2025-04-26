@@ -15,6 +15,7 @@ The original repo also loads all models at startup, which takes a lot of memory.
 - Add VAE tiling to reduce memory usage. From [deepbeepmeep/Wan2GP](https://github.com/deepbeepmeep/Wan2GP)
 - Add quantized T5 model to reduce memory usage.
 - Enable mixed precision for MPS, reducing memory usage and increasing speed.
+- Experimental support for FLF2V model.
 
 ## Installation
 

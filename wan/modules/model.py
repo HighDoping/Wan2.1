@@ -23,6 +23,9 @@ def get_device():
 
 amp_device = get_device()
 
+T5_CONTEXT_TOKEN_NUMBER = 512
+FIRST_LAST_FRAME_CONTEXT_TOKEN_NUMBER = 257 * 2
+
 
 def sinusoidal_embedding_1d(dim, position):
     # preprocess
@@ -205,8 +208,9 @@ class WanI2VCrossAttention(WanSelfAttention):
             context(Tensor): Shape [B, L2, C]
             context_lens(Tensor): Shape [B]
         """
-        context_img = context[:, :257]
-        context = context[:, 257:]
+        image_context_length = context.shape[1] - T5_CONTEXT_TOKEN_NUMBER
+        context_img = context[:, :image_context_length]
+        context = context[:, image_context_length:]
         b, n, d = x.size(0), self.num_heads, self.head_dim
 
         # compute query, key, value
@@ -347,7 +351,7 @@ class Head(nn.Module):
 
 
 class MLPProj(torch.nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, flf_pos_emb=False):
         super().__init__()
 
         self.proj = torch.nn.Sequential(
@@ -357,8 +361,16 @@ class MLPProj(torch.nn.Module):
             torch.nn.Linear(in_dim, out_dim),
             torch.nn.LayerNorm(out_dim),
         )
+        if flf_pos_emb:  # NOTE: we only use this for `flf2v`
+            self.emb_pos = nn.Parameter(
+                torch.zeros(1, FIRST_LAST_FRAME_CONTEXT_TOKEN_NUMBER, 1280)
+            )
 
     def forward(self, image_embeds):
+        if hasattr(self, "emb_pos"):
+            bs, n, d = image_embeds.shape
+            image_embeds = image_embeds.view(-1, 2 * n, d)
+            image_embeds = image_embeds + self.emb_pos
         clip_extra_context_tokens = self.proj(image_embeds)
         return clip_extra_context_tokens
 
@@ -401,7 +413,7 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
 
         Args:
             model_type (`str`, *optional*, defaults to 't2v'):
-                Model variant - 't2v' (text-to-video) or 'i2v' (image-to-video)
+                Model variant - 't2v' (text-to-video) or 'i2v' (image-to-video) or 'flf2v' (first-last-frame-to-video)
             patch_size (`tuple`, *optional*, defaults to (1, 2, 2)):
                 3D patch dimensions for video embedding (t_patch, h_patch, w_patch)
             text_len (`int`, *optional*, defaults to 512):
@@ -434,7 +446,7 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
 
         super().__init__()
 
-        assert model_type in ["t2v", "i2v"]
+        assert model_type in ["t2v", "i2v", "flf2v"]
         self.model_type = model_type
 
         self.patch_size = patch_size
@@ -498,8 +510,8 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
             dim=1,
         )
 
-        if model_type == "i2v":
-            self.img_emb = MLPProj(1280, dim)
+        if model_type == "i2v" or model_type == "flf2v":
+            self.img_emb = MLPProj(1280, dim, flf_pos_emb=model_type == "flf2v")
 
         # initialize weights
         self.init_weights()
@@ -526,7 +538,7 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
             seq_len (`int`):
                 Maximum sequence length for positional encoding
             clip_fea (Tensor, *optional*):
-                CLIP image features for image-to-video mode
+                CLIP image features for image-to-video mode or first-last-frame-to-video mode
             y (List[Tensor], *optional*):
                 Conditional video inputs for image-to-video mode, same shape as x
 
@@ -534,7 +546,7 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
             List[Tensor]:
                 List of denoised video tensors with original input shapes [C_out, F, H / 8, W / 8]
         """
-        if self.model_type == "i2v":
+        if self.model_type == "i2v" or self.model_type == "flf2v":
             assert clip_fea is not None and y is not None
         # params
         device = self.patch_embedding.weight.device
@@ -554,9 +566,7 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
         assert seq_lens.max() <= seq_len
         x = torch.cat(
             [
-                torch.cat(
-                    [u, u.new_zeros(1, seq_len - u.size(1), u.size(2))], dim=1
-                )
+                torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2))], dim=1)
                 for u in x
             ]
         )
@@ -579,7 +589,7 @@ class WanModel(ModelMixin, ConfigMixin):  # type: ignore
         )
 
         if clip_fea is not None:
-            context_clip = self.img_emb(clip_fea)  # bs x 257 x dim
+            context_clip = self.img_emb(clip_fea)  # bs x 257 (x2) x dim
             context = torch.concat([context_clip, context], dim=1)
 
         # arguments
