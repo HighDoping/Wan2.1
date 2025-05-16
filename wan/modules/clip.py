@@ -572,11 +572,7 @@ class CLIPModel:
 
         # forward
         with torch.amp.autocast(
-            device_type="cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu",
+            device_type=str(self.device),
             dtype=self.dtype,
         ):
             out = self.model.visual(videos, use_31_block=True)
