@@ -7,7 +7,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 import dashscope
 import torch
@@ -95,7 +95,6 @@ VL_EN_SYS_PROMPT =  \
     '''3. CG game concept digital art featuring a huge crocodile with its mouth wide open, with trees and thorns growing on its back. The crocodile's skin is rough and grayish-white, resembling stone or wood texture. Its back is lush with trees, shrubs, and thorny protrusions. With its mouth agape, the crocodile reveals a pink tongue and sharp teeth. The background features a dusk sky with some distant trees, giving the overall scene a dark and cold atmosphere. A close-up from a low angle.\n''' \
     '''4. In the style of an American drama promotional poster, Walter White sits in a metal folding chair wearing a yellow protective suit, with the words "Breaking Bad" written in sans-serif English above him, surrounded by piles of dollar bills and blue plastic storage boxes. He wears glasses, staring forward, dressed in a yellow jumpsuit, with his hands resting on his knees, exuding a calm and confident demeanor. The background shows an abandoned, dim factory with light filtering through the windows. There's a noticeable grainy texture. A medium shot with a straight-on close-up of the character.\n''' \
     '''Directly output the rewritten English text.'''
-
 
 VL_ZH_SYS_PROMPT_FOR_MULTI_IMAGES = """你是一位Prompt优化师，旨在参考用户输入的图像的细节内容，把用户输入的Prompt改写为优质Prompt，使其更完整、更具表现力，同时不改变原意。你需要综合用户输入的照片内容和输入的Prompt进行改写，严格参考示例的格式进行改写
 任务要求：
@@ -198,8 +197,8 @@ class PromptExpander:
         if system_prompt is None:
             system_prompt = self.decide_system_prompt(
                 tar_lang=tar_lang,
-                multi_images_input=isinstance(image, (list, tuple)) and len(image) > 1
-            )
+                multi_images_input=isinstance(image, (list, tuple)) and
+                len(image) > 1)
         if seed < 0:
             seed = random.randint(0, sys.maxsize)
         if image is not None and self.is_vl:
@@ -289,7 +288,8 @@ class DashScopePromptExpander(PromptExpander):
     def extend_with_img(self,
                         prompt,
                         system_prompt,
-                        image: Union[List[Image.Image], List[str], Image.Image, str] = None,
+                        image: Union[List[Image.Image], List[str], Image.Image,
+                                     str] = None,
                         seed=-1,
                         *args,
                         **kwargs):
@@ -308,13 +308,15 @@ class DashScopePromptExpander(PromptExpander):
                 _image.save(f.name)
                 image_path = f"file://{f.name}"
             return image_path
+
         if not isinstance(image, (list, tuple)):
             image = [image]
         image_path_list = [ensure_image(_image) for _image in image]
-        role_content = [
-            {"text": prompt},
-            *[{"image": image_path} for image_path in image_path_list]
-        ]
+        role_content = [{
+            "text": prompt
+        }, *[{
+            "image": image_path
+        } for image_path in image_path_list]]
         system_content = [{"text": system_prompt}]
         prompt = f"{prompt}"
         messages = [
@@ -393,8 +395,11 @@ class QwenPromptExpander(PromptExpander):
 
         if self.is_vl:
             # default: Load the model on the available device(s)
-            from transformers import (AutoProcessor, AutoTokenizer,
-                                      Qwen2_5_VLForConditionalGeneration)
+            from transformers import (
+                AutoProcessor,
+                AutoTokenizer,
+                Qwen2_5_VLForConditionalGeneration,
+            )
             try:
                 from .qwen_vl_utils import process_vision_info
             except:
@@ -429,11 +434,13 @@ class QwenPromptExpander(PromptExpander):
         if isinstance(device, torch.device):
             self.device = device
         elif device == "mps" or (isinstance(device, str) and "mps" in device):
-            self.device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+            self.device = torch.device(
+                "mps" if torch.backends.mps.is_available() else "cpu")
         elif isinstance(device, int) and device == -1:
             self.device = torch.device("cpu")
         else:
-            self.device = torch.device(f"cuda:{device}" if isinstance(device, int) else device)
+            self.device = torch.device(
+                f"cuda:{device}" if isinstance(device, int) else device)
 
     def extend(self, prompt, system_prompt, seed=-1, *args, **kwargs):
         self.model = self.model.to(self.device)
@@ -469,7 +476,8 @@ class QwenPromptExpander(PromptExpander):
     def extend_with_img(self,
                         prompt,
                         system_prompt,
-                        image: Union[List[Image.Image], List[str], Image.Image, str] = None,
+                        image: Union[List[Image.Image], List[str], Image.Image,
+                                     str] = None,
                         seed=-1,
                         *args,
                         **kwargs):
@@ -478,26 +486,19 @@ class QwenPromptExpander(PromptExpander):
         if not isinstance(image, (list, tuple)):
             image = [image]
 
-        system_content = [{
+        system_content = [{"type": "text", "text": system_prompt}]
+        role_content = [{
             "type": "text",
-            "text": system_prompt
-        }]
-        role_content = [
-            {
-                "type": "text",
-                "text": prompt
-            },
-            *[
-                {"image": image_path} for image_path in image
-            ]
-        ]
+            "text": prompt
+        }, *[{
+            "image": image_path
+        } for image_path in image]]
 
         messages = [{
             'role': 'system',
             'content': system_content,
         }, {
-            "role":
-                "user",
+            "role": "user",
             "content": role_content,
         }]
 
@@ -621,25 +622,38 @@ if __name__ == "__main__":
     print("VL qwen vl en result -> en",
           qwen_result.prompt)  # , qwen_result.system_prompt)
     # test multi images
-    image = ["./examples/flf2v_input_first_frame.png", "./examples/flf2v_input_last_frame.png"]
+    image = [
+        "./examples/flf2v_input_first_frame.png",
+        "./examples/flf2v_input_last_frame.png"
+    ]
     prompt = "无人机拍摄，镜头快速推进，然后拉远至全景俯瞰，展示一个宁静美丽的海港。海港内停满了游艇，水面清澈透蓝。周围是起伏的山丘和错落有致的建筑，整体景色宁静而美丽。"
-    en_prompt = ("Shot from a drone perspective, the camera rapidly zooms in before pulling back to reveal a panoramic "
-                 "aerial view of a serene and picturesque harbor. The tranquil bay is dotted with numerous yachts "
-                 "resting on crystal-clear blue waters. Surrounding the harbor are rolling hills and well-spaced "
-                 "architectural structures, combining to create a tranquil and breathtaking coastal landscape.")
+    en_prompt = (
+        "Shot from a drone perspective, the camera rapidly zooms in before pulling back to reveal a panoramic "
+        "aerial view of a serene and picturesque harbor. The tranquil bay is dotted with numerous yachts "
+        "resting on crystal-clear blue waters. Surrounding the harbor are rolling hills and well-spaced "
+        "architectural structures, combining to create a tranquil and breathtaking coastal landscape."
+    )
 
-    dashscope_prompt_expander = DashScopePromptExpander(model_name=ds_model_name, is_vl=True)
-    dashscope_result = dashscope_prompt_expander(prompt, tar_lang="zh", image=image, seed=seed)
+    dashscope_prompt_expander = DashScopePromptExpander(
+        model_name=ds_model_name, is_vl=True)
+    dashscope_result = dashscope_prompt_expander(
+        prompt, tar_lang="zh", image=image, seed=seed)
     print("VL dashscope result -> zh", dashscope_result.prompt)
 
-    dashscope_prompt_expander = DashScopePromptExpander(model_name=ds_model_name, is_vl=True)
-    dashscope_result = dashscope_prompt_expander(en_prompt, tar_lang="zh", image=image, seed=seed)
+    dashscope_prompt_expander = DashScopePromptExpander(
+        model_name=ds_model_name, is_vl=True)
+    dashscope_result = dashscope_prompt_expander(
+        en_prompt, tar_lang="zh", image=image, seed=seed)
     print("VL dashscope en result -> zh", dashscope_result.prompt)
 
-    qwen_prompt_expander = QwenPromptExpander(model_name=qwen_model_name, is_vl=True, device=0)
-    qwen_result = qwen_prompt_expander(prompt, tar_lang="zh", image=image, seed=seed)
+    qwen_prompt_expander = QwenPromptExpander(
+        model_name=qwen_model_name, is_vl=True, device=0)
+    qwen_result = qwen_prompt_expander(
+        prompt, tar_lang="zh", image=image, seed=seed)
     print("VL qwen result -> zh", qwen_result.prompt)
 
-    qwen_prompt_expander = QwenPromptExpander(model_name=qwen_model_name, is_vl=True, device=0)
-    qwen_result = qwen_prompt_expander(prompt, tar_lang="zh", image=image, seed=seed)
+    qwen_prompt_expander = QwenPromptExpander(
+        model_name=qwen_model_name, is_vl=True, device=0)
+    qwen_result = qwen_prompt_expander(
+        prompt, tar_lang="zh", image=image, seed=seed)
     print("VL qwen en result -> zh", qwen_result.prompt)

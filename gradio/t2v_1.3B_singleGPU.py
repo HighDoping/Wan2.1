@@ -1,7 +1,7 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import argparse
-import os.path as osp
 import os
+import os.path as osp
 import sys
 import warnings
 
@@ -10,7 +10,8 @@ import gradio as gr
 warnings.filterwarnings('ignore')
 
 # Model
-sys.path.insert(0, os.path.sep.join(osp.realpath(__file__).split(os.path.sep)[:-2]))
+sys.path.insert(
+    0, os.path.sep.join(osp.realpath(__file__).split(os.path.sep)[:-2]))
 import wan
 from wan.configs import WAN_CONFIGS
 from wan.utils.prompt_extend import DashScopePromptExpander, QwenPromptExpander

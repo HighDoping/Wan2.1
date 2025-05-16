@@ -276,10 +276,11 @@ def fetch_video(
         image_factor: int = IMAGE_FACTOR) -> torch.Tensor | list[Image.Image]:
     # Handle MPS device compatibility
     original_device = None
-    if isinstance(ele.get("video"), torch.Tensor) and ele["video"].device.type == "mps":
+    if isinstance(ele.get("video"),
+                  torch.Tensor) and ele["video"].device.type == "mps":
         original_device = ele["video"].device
         ele["video"] = ele["video"].cpu()
-        
+
     if isinstance(ele["video"], str):
         video_reader_backend = get_video_reader_backend()
         video = VIDEO_READER_BACKENDS[video_reader_backend](ele)

@@ -8,6 +8,7 @@ from torch.distributed.fsdp import MixedPrecision, ShardingStrategy
 from torch.distributed.fsdp.wrap import lambda_auto_wrap_policy
 from torch.distributed.utils import _free_storage
 
+
 def shard_model(
     model,
     device_id,
@@ -31,6 +32,7 @@ def shard_model(
         device_id=device_id,
         sync_module_states=sync_module_states)
     return model
+
 
 def free_model(model):
     for m in model.modules():

@@ -46,10 +46,11 @@ def flash_attention(
     assert q.size(-1) <= 256, "Sequence length exceeds the maximum limit."
 
     # Add CPU/MPS fallback implementation
-    if not (FLASH_ATTN_2_AVAILABLE or FLASH_ATTN_3_AVAILABLE) or q.device.type in [
-        "cpu",
-        "mps",
-    ]:
+    if not (FLASH_ATTN_2_AVAILABLE or
+            FLASH_ATTN_3_AVAILABLE) or q.device.type in [
+                "cpu",
+                "mps",
+            ]:
         # Implement standard attention for CPU/MPS
         return attention(
             q,
@@ -72,9 +73,9 @@ def flash_attention(
     # preprocess query
     if q_lens is None:
         q = half(q.flatten(0, 1))
-        q_lens = torch.tensor([lq] * b, dtype=torch.int32).to(
-            device=q.device, non_blocking=True
-        )
+        q_lens = torch.tensor(
+            [lq] * b, dtype=torch.int32).to(
+                device=q.device, non_blocking=True)
     else:
         q = half(torch.cat([u[:v] for u, v in zip(q, q_lens)]))
 
@@ -82,9 +83,9 @@ def flash_attention(
     if k_lens is None:
         k = half(k.flatten(0, 1))
         v = half(v.flatten(0, 1))
-        k_lens = torch.tensor([lk] * b, dtype=torch.int32).to(
-            device=k.device, non_blocking=True
-        )
+        k_lens = torch.tensor(
+            [lk] * b, dtype=torch.int32).to(
+                device=k.device, non_blocking=True)
     else:
         k = half(torch.cat([u[:v] for u, v in zip(k, k_lens)]))
         v = half(torch.cat([u[:v] for u, v in zip(v, k_lens)]))
@@ -107,12 +108,10 @@ def flash_attention(
             q=q,
             k=k,
             v=v,
-            cu_seqlens_q=torch.cat([q_lens.new_zeros([1]), q_lens])
-            .cumsum(0, dtype=torch.int32)
-            .to(q.device, non_blocking=True),
-            cu_seqlens_k=torch.cat([k_lens.new_zeros([1]), k_lens])
-            .cumsum(0, dtype=torch.int32)
-            .to(q.device, non_blocking=True),
+            cu_seqlens_q=torch.cat([q_lens.new_zeros([1]), q_lens]).cumsum(
+                0, dtype=torch.int32).to(q.device, non_blocking=True),
+            cu_seqlens_k=torch.cat([k_lens.new_zeros([1]), k_lens]).cumsum(
+                0, dtype=torch.int32).to(q.device, non_blocking=True),
             seqused_q=None,
             seqused_k=None,
             max_seqlen_q=lq,
@@ -127,12 +126,10 @@ def flash_attention(
             q=q,
             k=k,
             v=v,
-            cu_seqlens_q=torch.cat([q_lens.new_zeros([1]), q_lens])
-            .cumsum(0, dtype=torch.int32)
-            .to(q.device, non_blocking=True),
-            cu_seqlens_k=torch.cat([k_lens.new_zeros([1]), k_lens])
-            .cumsum(0, dtype=torch.int32)
-            .to(q.device, non_blocking=True),
+            cu_seqlens_q=torch.cat([q_lens.new_zeros([1]), q_lens]).cumsum(
+                0, dtype=torch.int32).to(q.device, non_blocking=True),
+            cu_seqlens_k=torch.cat([k_lens.new_zeros([1]), k_lens]).cumsum(
+                0, dtype=torch.int32).to(q.device, non_blocking=True),
             max_seqlen_q=lq,
             max_seqlen_k=lk,
             dropout_p=dropout_p,
@@ -189,8 +186,7 @@ def attention(
         v = v.transpose(1, 2).to(dtype)
 
         out = torch.nn.functional.scaled_dot_product_attention(
-            q, k, v, attn_mask=attn_mask, is_causal=causal, dropout_p=dropout_p
-        )
+            q, k, v, attn_mask=attn_mask, is_causal=causal, dropout_p=dropout_p)
 
         out = out.transpose(1, 2).contiguous()
         return out

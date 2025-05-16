@@ -1,8 +1,8 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import argparse
 import gc
-import os.path as osp
 import os
+import os.path as osp
 import sys
 import warnings
 
@@ -11,7 +11,8 @@ import gradio as gr
 warnings.filterwarnings('ignore')
 
 # Model
-sys.path.insert(0, os.path.sep.join(osp.realpath(__file__).split(os.path.sep)[:-2]))
+sys.path.insert(
+    0, os.path.sep.join(osp.realpath(__file__).split(os.path.sep)[:-2]))
 import wan
 from wan.configs import MAX_AREA_CONFIGS, WAN_CONFIGS
 from wan.utils.prompt_extend import DashScopePromptExpander, QwenPromptExpander
@@ -69,13 +70,13 @@ def prompt_enc(prompt, img_first, img_last, tar_lang):
         return prompt_output.prompt
 
 
-def flf2v_generation(flf2vid_prompt, flf2vid_image_first, flf2vid_image_last, resolution, sd_steps,
-                   guide_scale, shift_scale, seed, n_prompt):
+def flf2v_generation(flf2vid_prompt, flf2vid_image_first, flf2vid_image_last,
+                     resolution, sd_steps, guide_scale, shift_scale, seed,
+                     n_prompt):
 
     if resolution == '------':
         print(
-            'Please specify the resolution ckpt dir or specify the resolution'
-        )
+            'Please specify the resolution ckpt dir or specify the resolution')
         return None
 
     else:
@@ -94,9 +95,7 @@ def flf2v_generation(flf2vid_prompt, flf2vid_image_first, flf2vid_image_last, re
                 offload_model=True)
             pass
         else:
-            print(
-                'Sorry, currently only 720P is supported.'
-            )
+            print('Sorry, currently only 720P is supported.')
             return None
 
         cache_video(
@@ -191,14 +190,17 @@ def gradio_interface():
 
         run_p_button.click(
             fn=prompt_enc,
-            inputs=[flf2vid_prompt, flf2vid_image_first, flf2vid_image_last, tar_lang],
+            inputs=[
+                flf2vid_prompt, flf2vid_image_first, flf2vid_image_last,
+                tar_lang
+            ],
             outputs=[flf2vid_prompt])
 
         run_flf2v_button.click(
             fn=flf2v_generation,
             inputs=[
-                flf2vid_prompt, flf2vid_image_first, flf2vid_image_last, resolution, sd_steps,
-                guide_scale, shift_scale, seed, n_prompt
+                flf2vid_prompt, flf2vid_image_first, flf2vid_image_last,
+                resolution, sd_steps, guide_scale, shift_scale, seed, n_prompt
             ],
             outputs=[result_gallery],
         )

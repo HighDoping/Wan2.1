@@ -105,9 +105,16 @@ function i2v_14B_720p() {
     torchrun --nproc_per_node=$GPUS $PY_FILE --task i2v-14B --ckpt_dir $I2V_14B_CKPT_DIR --size 720*1280 --dit_fsdp --t5_fsdp --ulysses_size $GPUS
 }
 
+function vace_1_3B() {
+    VACE_1_3B_CKPT_DIR="$MODEL_DIR/VACE-Wan2.1-1.3B-Preview/"
+    torchrun --nproc_per_node=$GPUS $PY_FILE --ulysses_size $GPUS --task vace-1.3B --size 480*832 --ckpt_dir $VACE_1_3B_CKPT_DIR
+
+}
+
 
 t2i_14B
 t2v_1_3B
 t2v_14B
 i2v_14B_480p
 i2v_14B_720p
+vace_1_3B

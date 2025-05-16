@@ -37,6 +37,7 @@ def clear_cache():
 
 
 class WanI2V:
+
     def __init__(
         self,
         config,
@@ -76,10 +77,10 @@ class WanI2V:
         # Check if device_id is a torch.device instance
         if isinstance(device_id, torch.device):
             self.device = device_id
-        elif device_id == "mps" or (isinstance(device_id, int) and device_id == -1):
+        elif device_id == "mps" or (isinstance(device_id, int) and
+                                    device_id == -1):
             self.device = torch.device(
-                "mps" if torch.backends.mps.is_available() else "cpu"
-            )
+                "mps" if torch.backends.mps.is_available() else "cpu")
         else:
             self.device = torch.device(f"cuda:{device_id}")
 
@@ -162,26 +163,16 @@ class WanI2V:
         h, w = img.shape[1:]
         aspect_ratio = h / w
         lat_h = round(
-            np.sqrt(max_area * aspect_ratio)
-            // self.vae_stride[1]
-            // self.patch_size[1]
-            * self.patch_size[1]
-        )
+            np.sqrt(max_area * aspect_ratio) // self.vae_stride[1] //
+            self.patch_size[1] * self.patch_size[1])
         lat_w = round(
-            np.sqrt(max_area / aspect_ratio)
-            // self.vae_stride[2]
-            // self.patch_size[2]
-            * self.patch_size[2]
-        )
+            np.sqrt(max_area / aspect_ratio) // self.vae_stride[2] //
+            self.patch_size[2] * self.patch_size[2])
         h = lat_h * self.vae_stride[1]
         w = lat_w * self.vae_stride[2]
 
-        max_seq_len = (
-            ((F - 1) // self.vae_stride[0] + 1)
-            * lat_h
-            * lat_w
-            // (self.patch_size[1] * self.patch_size[2])
-        )
+        max_seq_len = (((F - 1) // self.vae_stride[0] + 1) * lat_h * lat_w //
+                       (self.patch_size[1] * self.patch_size[2]))
         max_seq_len = int(math.ceil(max_seq_len / self.sp_size)) * self.sp_size
 
         seed = seed if seed >= 0 else random.randint(0, sys.maxsize)
@@ -199,9 +190,10 @@ class WanI2V:
 
         msk = torch.ones(1, F, lat_h, lat_w, device=self.device)
         msk[:, 1:] = 0
-        msk = torch.concat(
-            [torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]], dim=1
-        )
+        msk = torch.concat([
+            torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]
+        ],
+                           dim=1)
         msk = msk.view(1, msk.shape[1] // 4, 4, lat_h, lat_w)
         msk = msk.transpose(1, 2)[0]
 
@@ -214,18 +206,17 @@ class WanI2V:
             # custom t5 quantization
             from .modules.t5_gguf import run_llama_embedding
 
-            checkpoint_path = os.path.join(
-                self.checkpoint_dir, self.config.t5_quant_checkpoint
-            )
+            checkpoint_path = os.path.join(self.checkpoint_dir,
+                                           self.config.t5_quant_checkpoint)
             context = [
-                torch.from_numpy(run_llama_embedding(checkpoint_path, input_prompt)).to(
-                    self.device
-                )
+                torch.from_numpy(
+                    run_llama_embedding(checkpoint_path,
+                                        input_prompt)).to(self.device)
             ]
             context_null = [
-                torch.from_numpy(run_llama_embedding(checkpoint_path, n_prompt)).to(
-                    self.device
-                )
+                torch.from_numpy(
+                    run_llama_embedding(checkpoint_path,
+                                        n_prompt)).to(self.device)
             ]
         else:
             # original t5
@@ -235,12 +226,10 @@ class WanI2V:
                 text_len=self.config.text_len,
                 dtype=self.config.t5_dtype,
                 device=torch.device("cpu"),
-                checkpoint_path=os.path.join(
-                    self.checkpoint_dir, self.config.t5_checkpoint
-                ),
-                tokenizer_path=os.path.join(
-                    self.checkpoint_dir, self.config.t5_tokenizer
-                ),
+                checkpoint_path=os.path.join(self.checkpoint_dir,
+                                             self.config.t5_checkpoint),
+                tokenizer_path=os.path.join(self.checkpoint_dir,
+                                            self.config.t5_tokenizer),
                 shard_fn=None,
             )
 
@@ -250,7 +239,8 @@ class WanI2V:
                 context_null = self.text_encoder([n_prompt], self.device)
             else:
                 context = self.text_encoder([input_prompt], torch.device("cpu"))
-                context_null = self.text_encoder([n_prompt], torch.device("cpu"))
+                context_null = self.text_encoder([n_prompt],
+                                                 torch.device("cpu"))
                 context = [t.to(self.device) for t in context]
                 context_null = [t.to(self.device) for t in context_null]
             if offload_model:
@@ -262,12 +252,10 @@ class WanI2V:
         self.clip = CLIPModel(
             dtype=self.config.clip_dtype,
             device=self.device,
-            checkpoint_path=os.path.join(
-                self.checkpoint_dir, self.config.clip_checkpoint
-            ),
-            tokenizer_path=os.path.join(
-                self.checkpoint_dir, self.config.clip_tokenizer
-            ),
+            checkpoint_path=os.path.join(self.checkpoint_dir,
+                                         self.config.clip_checkpoint),
+            tokenizer_path=os.path.join(self.checkpoint_dir,
+                                        self.config.clip_tokenizer),
         )
         clip_context = self.clip.visual([img[:, None, :, :]])
         print(clip_context)
@@ -278,7 +266,8 @@ class WanI2V:
 
         logging.info("Loading VAE model.")
         self.vae = WanVAE(
-            vae_pth=os.path.join(self.checkpoint_dir, self.config.vae_checkpoint),
+            vae_pth=os.path.join(self.checkpoint_dir,
+                                 self.config.vae_checkpoint),
             device=self.device,
         )
         logging.info("Encoding image.")
@@ -287,8 +276,8 @@ class WanI2V:
                 torch.concat(
                     [
                         torch.nn.functional.interpolate(
-                            img[None], size=(h, w), mode="bicubic"
-                        ).transpose(0, 1),
+                            img[None], size=(h, w), mode="bicubic").transpose(
+                                0, 1),
                         torch.zeros(3, F - 1, h, w),
                     ],
                     dim=1,
@@ -309,7 +298,10 @@ class WanI2V:
             self.model = WanModel.from_pretrained(
                 self.checkpoint_dir,
                 device_map="auto",
-                max_memory={"mps": mps_ram, "cpu": "0.5GB"},
+                max_memory={
+                    "mps": mps_ram,
+                    "cpu": "0.5GB"
+                },
                 offload_folder="disk_offload",
                 offload_state_dict=True,
             )
@@ -326,9 +318,10 @@ class WanI2V:
 
         # evaluation mode
         with (
-            amp.autocast(device_type=str(self.device), dtype=self.param_dtype),
-            torch.no_grad(),
-            no_sync(),
+                amp.autocast(
+                    device_type=str(self.device), dtype=self.param_dtype),
+                torch.no_grad(),
+                no_sync(),
         ):
             if sample_solver == "unipc":
                 sample_scheduler = FlowUniPCMultistepScheduler(
@@ -337,8 +330,7 @@ class WanI2V:
                     use_dynamic_shifting=False,
                 )
                 sample_scheduler.set_timesteps(
-                    sampling_steps, device=self.device, shift=shift
-                )
+                    sampling_steps, device=self.device, shift=shift)
                 timesteps = sample_scheduler.timesteps
             elif sample_solver == "dpm++":
                 sample_scheduler = FlowDPMSolverMultistepScheduler(
@@ -348,8 +340,9 @@ class WanI2V:
                 )
                 sampling_sigmas = get_sampling_sigmas(sampling_steps, shift)
                 timesteps, _ = retrieve_timesteps(
-                    sample_scheduler, device=self.device, sigmas=sampling_sigmas
-                )
+                    sample_scheduler,
+                    device=self.device,
+                    sigmas=sampling_sigmas)
             else:
                 raise NotImplementedError("Unsupported solver.")
 
@@ -380,13 +373,12 @@ class WanI2V:
 
                 timestep = torch.stack(timestep)
 
-                noise_pred_cond = self.model(latent_model_input, t=timestep, **arg_c)[0]
+                noise_pred_cond = self.model(
+                    latent_model_input, t=timestep, **arg_c)[0]
                 noise_pred_uncond = self.model(
-                    latent_model_input, t=timestep, **arg_null
-                )[0]
+                    latent_model_input, t=timestep, **arg_null)[0]
                 noise_pred = noise_pred_uncond + guide_scale * (
-                    noise_pred_cond - noise_pred_uncond
-                )
+                    noise_pred_cond - noise_pred_uncond)
 
                 temp_x0 = sample_scheduler.step(
                     noise_pred.unsqueeze(0),
@@ -411,9 +403,8 @@ class WanI2V:
             if self.rank == 0:
                 logging.info("Loading VAE model.")
                 self.vae = WanVAE(
-                    vae_pth=os.path.join(
-                        self.checkpoint_dir, self.config.vae_checkpoint
-                    ),
+                    vae_pth=os.path.join(self.checkpoint_dir,
+                                         self.config.vae_checkpoint),
                     device=self.device,
                 )
                 logging.info("Decoding video.")

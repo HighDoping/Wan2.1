@@ -3,9 +3,9 @@ name = "wan"
 version = "2.1.0"
 description = "Wan2.1 for Mac."
 authors = [
-    { name = "Wan Team",email = "wan.ai@alibabacloud.com"},
-    { name = "Bakhtiyor Sulaymonov",email = "bakhti.ai.uz@gmail.com"},
-    { name = "HighDoping",email = "HighDoping@gmail.com"}
+    { name = "Wan Team", email = "wan.ai@alibabacloud.com" },
+    { name = "Bakhtiyor Sulaymonov", email = "bakhti.ai.uz@gmail.com" },
+    { name = "HighDoping", email = "HighDoping@gmail.com" },
 ]
 license = { file = "LICENSE.txt" }
 readme = "README.md"
@@ -26,7 +26,7 @@ dependencies = [
     "imageio-ffmpeg",
     "gradio>=5.0.0",
     "numpy>=1.23.5,<2",
-    "einops"
+    "einops",
 ]
 
 [project.optional-dependencies]
@@ -37,7 +37,7 @@ dev = [
     "isort",
     "mypy",
     "huggingface-hub[cli]",
-    "modelscope"
+    "modelscope",
 ]
 
 [project.urls]
@@ -58,3 +58,5 @@ profile = "black"
 
 [tool.mypy]
 strict = true
+[tool.poetry.group.dev.dependencies]
+yapf = "^0.43.0"

@@ -1,9 +1,11 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import torch
 import torch.cuda.amp as amp
-from xfuser.core.distributed import (get_sequence_parallel_rank,
-                                     get_sequence_parallel_world_size,
-                                     get_sp_group)
+from xfuser.core.distributed import (
+    get_sequence_parallel_rank,
+    get_sequence_parallel_world_size,
+    get_sp_group,
+)
 from xfuser.core.long_ctx_attention import xFuserLongContextAttention
 
 from ..modules.model import sinusoidal_embedding_1d
@@ -63,12 +65,39 @@ def rope_apply(x, grid_sizes, freqs):
     return torch.stack(output).float()
 
 
+def usp_dit_forward_vace(self, x, vace_context, seq_len, kwargs):
+    # embeddings
+    c = [self.vace_patch_embedding(u.unsqueeze(0)) for u in vace_context]
+    c = [u.flatten(2).transpose(1, 2) for u in c]
+    c = torch.cat([
+        torch.cat([u, u.new_zeros(1, seq_len - u.size(1), u.size(2))], dim=1)
+        for u in c
+    ])
+
+    # arguments
+    new_kwargs = dict(x=x)
+    new_kwargs.update(kwargs)
+
+    # Context Parallel
+    c = torch.chunk(
+        c, get_sequence_parallel_world_size(),
+        dim=1)[get_sequence_parallel_rank()]
+
+    hints = []
+    for block in self.vace_blocks:
+        c, c_skip = block(c, **new_kwargs)
+        hints.append(c_skip)
+    return hints
+
+
 def usp_dit_forward(
     self,
     x,
     t,
     context,
     seq_len,
+    vace_context=None,
+    vace_context_scale=1.0,
     clip_fea=None,
     y=None,
 ):
@@ -84,7 +113,7 @@ def usp_dit_forward(
     if self.freqs.device != device:
         self.freqs = self.freqs.to(device)
 
-    if y is not None:
+    if self.model_type != 'vace' and y is not None:
         x = [torch.cat([u, v], dim=0) for u, v in zip(x, y)]
 
     # embeddings
@@ -114,7 +143,7 @@ def usp_dit_forward(
             for u in context
         ]))
 
-    if clip_fea is not None:
+    if self.model_type != 'vace' and clip_fea is not None:
         context_clip = self.img_emb(clip_fea)  # bs x 257 x dim
         context = torch.concat([context_clip, context], dim=1)
 
@@ -131,6 +160,11 @@ def usp_dit_forward(
     x = torch.chunk(
         x, get_sequence_parallel_world_size(),
         dim=1)[get_sequence_parallel_rank()]
+
+    if self.model_type == 'vace':
+        hints = self.forward_vace(x, vace_context, seq_len, kwargs)
+        kwargs['hints'] = hints
+        kwargs['context_scale'] = vace_context_scale
 
     for block in self.blocks:
         x = block(x, **kwargs)
