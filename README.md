@@ -75,7 +75,7 @@ To generate a video, use the following command:
 
 ```bash
 export PYTORCH_ENABLE_MPS_FALLBACK=1
-python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25  --ckpt_dir ./Wan2.1-T2V-1.3B --tile_size 256 --offload_model True --t5_quant --device mps --sample_shift 8 --sample_guide_scale 6 --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
+python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_steps 25  --ckpt_dir ./Wan2.1-T2V-1.3B --tile_size 256 --offload_model True --t5_quant --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4
 ```
 
 ```--t5_quant``` enables the quantized T5 model.
@@ -120,7 +120,20 @@ Example:
 
 ```bash
 export PYTORCH_ENABLE_MPS_FALLBACK=1
-python generate.py --task t2v-14B --size "832*480" --frame_num 5 --sample_steps 2 --tile_size 256 --ckpt_dir ./Wan2.1-T2V-14B --offload_model True --t5_quant --device mps --sample_shift 8 --sample_guide_scale 6 --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4 --disk_offload --mps_ram 10GB
+python generate.py --task t2v-14B --size "832*480" --frame_num 5 --sample_steps 2 --tile_size 256 --ckpt_dir ./Wan2.1-T2V-14B --offload_model True --t5_quant --device mps --prompt "Penguins fighting a polar bear in the arctic." --save_file output_video.mp4 --disk_offload --mps_ram 10GB
 ```
 
 For 32GB M4 Mac Mini with 10 Gbps external storage, Time taken: 14m.
+
+## Default parameters
+
+The default parameters from the original repo are:
+
+| Model | Task | Size | Frame Num | Sample Steps |
+|-------|------|------|-----------|--------------|
+| T2V-1.3B | Text to Video | 832*480 | 81 | 50 |
+| T2V-14B | Text to Video | 832*480 | 81 | 50 |
+| I2V-14B-480P | Image to Video | 832*480 | 81 | 40|
+| I2V-14B-720P | Image to Video | 1280*720 | 81 | 40 |
+| FLF2V-14B-720P | First-Last-Frame to Video | 1280*720 | 81 | 50 |
+| Any | Text to Image | Any | 1 | 50 |
