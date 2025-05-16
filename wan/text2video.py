@@ -109,6 +109,8 @@ class WanT2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
+        disk_offload=False,
+        mps_ram="10GB",
         VAE_tile_size=None,
     ):
         r"""
@@ -218,9 +220,19 @@ class WanT2V:
                 clear_cache()
 
         logging.info("Loading WanModel")
-        self.model = WanModel.from_pretrained(self.checkpoint_dir)
+        if disk_offload:
+            logging.info("Use disk offload.")
+            self.model = WanModel.from_pretrained(
+                self.checkpoint_dir,
+                device_map="auto",
+                max_memory={"mps": mps_ram, "cpu": "0.5GB"},
+                offload_folder="disk_offload",
+                offload_state_dict=True,
+            )
+        else:
+            self.model = WanModel.from_pretrained(self.checkpoint_dir)
+            self.model.to(self.device)
         self.model.eval().requires_grad_(False)
-        self.model.to(self.device)
 
         noise = [
             torch.randn(
@@ -279,9 +291,6 @@ class WanT2V:
             for _, t in enumerate(tqdm(timesteps)):
                 latent_model_input = latents
                 latent = latents[0]
-                if offload_model:
-                    del latents
-                    clear_cache()
                 timestep = [t]
 
                 timestep = torch.stack(timestep)
@@ -303,8 +312,9 @@ class WanT2V:
                     generator=seed_g,
                 )[0]
                 latents = [temp_x0.squeeze(0)]
+
+                del noise_pred, noise_pred_cond, noise_pred_uncond, temp_x0
                 if offload_model:
-                    del noise_pred, noise_pred_cond, noise_pred_uncond, temp_x0
                     clear_cache()
 
             logging.info("End generation loop.")

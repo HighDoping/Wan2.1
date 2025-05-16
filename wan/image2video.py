@@ -116,6 +116,8 @@ class WanI2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
+        disk_offload=False,
+        mps_ram="10GB",
         VAE_tile_size=None,
     ):
         r"""
@@ -207,7 +209,9 @@ class WanI2V:
             n_prompt = self.sample_neg_prompt
 
         logging.info("Loading text encoder model.")
+
         if self.t5_quant:
+            # custom t5 quantization
             from .modules.t5_gguf import run_llama_embedding
 
             checkpoint_path = os.path.join(
@@ -224,6 +228,7 @@ class WanI2V:
                 )
             ]
         else:
+            # original t5
             from .modules.t5 import T5EncoderModel
 
             self.text_encoder = T5EncoderModel(
@@ -264,8 +269,8 @@ class WanI2V:
                 self.checkpoint_dir, self.config.clip_tokenizer
             ),
         )
-        self.clip.model.to(self.device)
         clip_context = self.clip.visual([img[:, None, :, :]])
+        print(clip_context)
         if offload_model:
             del self.clip
             logging.info("Remove CLIP model.")
@@ -298,9 +303,20 @@ class WanI2V:
         y = torch.concat([msk, y])
 
         logging.info("Loading WanModel")
-        self.model = WanModel.from_pretrained(self.checkpoint_dir)
+
+        if disk_offload:
+            logging.info("Use disk offload.")
+            self.model = WanModel.from_pretrained(
+                self.checkpoint_dir,
+                device_map="auto",
+                max_memory={"mps": mps_ram, "cpu": "0.5GB"},
+                offload_folder="disk_offload",
+                offload_state_dict=True,
+            )
+        else:
+            self.model = WanModel.from_pretrained(self.checkpoint_dir)
+            self.model.to(self.device)
         self.model.eval().requires_grad_(False)
-        self.model.to(self.device)
 
         @contextmanager
         def noop_no_sync():
@@ -310,7 +326,7 @@ class WanI2V:
 
         # evaluation mode
         with (
-            amp.autocast(device_type=self.device, dtype=self.param_dtype),
+            amp.autocast(device_type=str(self.device), dtype=self.param_dtype),
             torch.no_grad(),
             no_sync(),
         ):
@@ -354,31 +370,23 @@ class WanI2V:
                 "y": [y],
             }
 
-            if offload_model:
-                clear_cache()
+            # if offload_model:
+            #     clear_cache()
 
             logging.info("Start generation loop.")
             for _, t in enumerate(tqdm(timesteps)):
-                latent_model_input = [latent.to(self.device)]
+                latent_model_input = [latent]
                 timestep = [t]
 
-                timestep = torch.stack(timestep).to(self.device)
+                timestep = torch.stack(timestep)
 
-                noise_pred_cond = self.model(latent_model_input, t=timestep, **arg_c)[
-                    0
-                ].to(self.device)
-                if offload_model:
-                    clear_cache()
+                noise_pred_cond = self.model(latent_model_input, t=timestep, **arg_c)[0]
                 noise_pred_uncond = self.model(
                     latent_model_input, t=timestep, **arg_null
-                )[0].to(self.device)
-                if offload_model:
-                    clear_cache()
+                )[0]
                 noise_pred = noise_pred_uncond + guide_scale * (
                     noise_pred_cond - noise_pred_uncond
                 )
-
-                latent = latent.to(self.device)
 
                 temp_x0 = sample_scheduler.step(
                     noise_pred.unsqueeze(0),
@@ -389,7 +397,9 @@ class WanI2V:
                 )[0]
                 latent = temp_x0.squeeze(0)
 
-                x0 = [latent.to(self.device)]
+                x0 = [latent]
+                if offload_model:
+                    clear_cache()
                 del latent_model_input, timestep
             logging.info("End generation loop.")
 

@@ -116,6 +116,8 @@ class WanFLF2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
+        disk_offload=False,
+        mps_ram="10GB",
         VAE_tile_size=None,
     ):
         r"""
@@ -214,7 +216,7 @@ class WanFLF2V:
             device=self.device,
         )
 
-        msk = torch.ones(1, 81, lat_h, lat_w, device=self.device)
+        msk = torch.ones(1, F, lat_h, lat_w, device=self.device)
         msk[:, 1:-1] = 0
         msk = torch.concat(
             [torch.repeat_interleave(msk[:, 0:1], repeats=4, dim=1), msk[:, 1:]], dim=1
@@ -304,20 +306,21 @@ class WanFLF2V:
                 torch.concat(
                     [
                         torch.nn.functional.interpolate(
-                            first_frame[None].cpu(),
+                            first_frame[None],
                             size=(first_frame_h, first_frame_w),
                             mode="bicubic",
                         ).transpose(0, 1),
                         torch.zeros(3, F - 2, first_frame_h, first_frame_w),
                         torch.nn.functional.interpolate(
-                            last_frame[None].cpu(),
+                            last_frame[None],
                             size=(first_frame_h, first_frame_w),
                             mode="bicubic",
                         ).transpose(0, 1),
                     ],
                     dim=1,
                 ).to(self.device)
-            ]
+            ],
+            VAE_tile_size,
         )[0]
         if offload_model:
             del self.vae
@@ -326,9 +329,19 @@ class WanFLF2V:
         y = torch.concat([msk, y])
 
         logging.info("Loading WanModel")
-        self.model = WanModel.from_pretrained(self.checkpoint_dir)
+        if disk_offload:
+            logging.info("Use disk offload.")
+            self.model = WanModel.from_pretrained(
+                self.checkpoint_dir,
+                device_map="auto",
+                max_memory={"mps": mps_ram, "cpu": "0.5GB"},
+                offload_folder="disk_offload",
+                offload_state_dict=True,
+            )
+        else:
+            self.model = WanModel.from_pretrained(self.checkpoint_dir)
+            self.model.to(self.device)
         self.model.eval().requires_grad_(False)
-        self.model.to(self.device)
 
         @contextmanager
         def noop_no_sync():
@@ -338,7 +351,7 @@ class WanFLF2V:
 
         # evaluation mode
         with (
-            amp.autocast(device_type=self.device, dtype=self.param_dtype),
+            amp.autocast(device_type=str(self.device), dtype=self.param_dtype),
             torch.no_grad(),
             no_sync(),
         ):
@@ -390,23 +403,17 @@ class WanFLF2V:
                 latent_model_input = [latent.to(self.device)]
                 timestep = [t]
 
-                timestep = torch.stack(timestep).to(self.device)
+                timestep = torch.stack(timestep)
 
-                noise_pred_cond = self.model(latent_model_input, t=timestep, **arg_c)[
-                    0
-                ].to(self.device)
-                if offload_model:
-                    clear_cache()
+                noise_pred_cond = self.model(latent_model_input, t=timestep, **arg_c)[0]
+
                 noise_pred_uncond = self.model(
                     latent_model_input, t=timestep, **arg_null
-                )[0].to(self.device)
-                if offload_model:
-                    clear_cache()
+                )[0]
+
                 noise_pred = noise_pred_uncond + guide_scale * (
                     noise_pred_cond - noise_pred_uncond
                 )
-
-                latent = latent.to(self.device)
 
                 temp_x0 = sample_scheduler.step(
                     noise_pred.unsqueeze(0),
@@ -417,7 +424,9 @@ class WanFLF2V:
                 )[0]
                 latent = temp_x0.squeeze(0)
 
-                x0 = [latent.to(self.device)]
+                x0 = [latent]
+                if offload_model:
+                    clear_cache()
                 del latent_model_input, timestep
             logging.info("End generation loop.")
 

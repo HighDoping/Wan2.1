@@ -34,12 +34,9 @@ EXAMPLE_PROMPT = {
         "image": "examples/i2v_input.JPG",
     },
     "flf2v-14B": {
-            "prompt":
-                "CG动画风格，一只蓝色的小鸟从地面起飞，煽动翅膀。小鸟羽毛细腻，胸前有独特的花纹，背景是蓝天白云，阳光明媚。镜跟随小鸟向上移动，展现出小鸟飞翔的姿态和天空的广阔。近景，仰视视角。",
-            "first_frame":
-                "examples/flf2v_input_first_frame.png",
-            "last_frame":
-                "examples/flf2v_input_last_frame.png",
+        "prompt": "CG动画风格，一只蓝色的小鸟从地面起飞，煽动翅膀。小鸟羽毛细腻，胸前有独特的花纹，背景是蓝天白云，阳光明媚。镜跟随小鸟向上移动，展现出小鸟飞翔的姿态和天空的广阔。近景，仰视视角。",
+        "first_frame": "examples/flf2v_input_first_frame.png",
+        "last_frame": "examples/flf2v_input_last_frame.png",
     },
 }
 
@@ -67,17 +64,17 @@ def _validate_args(args):
 
     # T2I frame_num check
     if "t2i" in args.task:
-        assert args.frame_num == 1, (
-            f"Unsupport frame_num {args.frame_num} for task {args.task}"
-        )
+        assert (
+            args.frame_num == 1
+        ), f"Unsupport frame_num {args.frame_num} for task {args.task}"
 
     args.base_seed = (
         args.base_seed if args.base_seed >= 0 else random.randint(0, sys.maxsize)
     )
     # Size check
-    assert args.size in SUPPORTED_SIZES[args.task], (
-        f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
-    )
+    assert (
+        args.size in SUPPORTED_SIZES[args.task]
+    ), f"Unsupport size {args.size} for task {args.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[args.task])}"
 
 
 def _parse_args():
@@ -203,17 +200,20 @@ def _parse_args():
         "--image",
         type=str,
         default=None,
-        help="[image to video] The image to generate the video from.")
+        help="[image to video] The image to generate the video from.",
+    )
     parser.add_argument(
         "--first_frame",
         type=str,
         default=None,
-        help="[first-last frame to video] The image (first frame) to generate the video from.")
+        help="[first-last frame to video] The image (first frame) to generate the video from.",
+    )
     parser.add_argument(
         "--last_frame",
         type=str,
         default=None,
-        help="[first-last frame to video] The image (last frame) to generate the video from.")
+        help="[first-last frame to video] The image (last frame) to generate the video from.",
+    )
     parser.add_argument(
         "--sample_solver",
         type=str,
@@ -241,6 +241,18 @@ def _parse_args():
         type=str,
         default=None,
         help="Device to use for computation (mps, cpu).",
+    )
+    parser.add_argument(
+        "--disk_offload",
+        action="store_true",
+        default=False,
+        help="Whether to offload the model to disk.",
+    )
+    parser.add_argument(
+        "--mps_ram",
+        type=str,
+        default=None,
+        help="The MPS RAM to use for loading. Eg. 8GB",
     )
 
     args = parser.parse_args()
@@ -284,9 +296,7 @@ def generate(args):
             device = torch.device(
                 "cuda:0"
                 if torch.cuda.is_available()
-                else "mps"
-                if torch.backends.mps.is_available()
-                else "cpu"
+                else "mps" if torch.backends.mps.is_available() else "cpu"
             )
         _init_logging(rank)
 
@@ -300,7 +310,9 @@ def generate(args):
     if args.use_prompt_extend:
         if args.prompt_extend_method == "dashscope":
             prompt_expander = DashScopePromptExpander(
-                model_name=args.prompt_extend_model, is_vl="i2v" in args.task or "flf2v" in args.task)
+                model_name=args.prompt_extend_model,
+                is_vl="i2v" in args.task or "flf2v" in args.task,
+            )
         elif args.prompt_extend_method == "local_qwen":
             prompt_expander = QwenPromptExpander(
                 model_name=args.prompt_extend_model,
@@ -360,6 +372,8 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
             VAE_tile_size=args.tile_size,
         )
 
@@ -414,7 +428,10 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
-            VAE_tile_size=args.tile_size,)
+            VAE_tile_size=args.tile_size,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
+        )
     else:
         if args.prompt is None:
             args.prompt = EXAMPLE_PROMPT[args.task]["prompt"]
@@ -433,10 +450,10 @@ def generate(args):
                     args.prompt,
                     tar_lang=args.prompt_extend_target_lang,
                     image=[first_frame, last_frame],
-                    seed=args.base_seed)
+                    seed=args.base_seed,
+                )
                 if prompt_output.status == False:
-                    logging.info(
-                        f"Extending prompt failed: {prompt_output.message}")
+                    logging.info(f"Extending prompt failed: {prompt_output.message}")
                     logging.info("Falling back to original prompt.")
                     input_prompt = args.prompt
                 else:
@@ -459,6 +476,7 @@ def generate(args):
             dit_fsdp=args.dit_fsdp,
             use_usp=(args.ulysses_size > 1 or args.ring_size > 1),
             t5_cpu=args.t5_cpu,
+            t5_quant=args.t5_quant,
         )
 
         logging.info("Generating video ...")
@@ -473,7 +491,10 @@ def generate(args):
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model
+            offload_model=args.offload_model,
+            VAE_tile_size=args.tile_size,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
         )
 
     # Save output
