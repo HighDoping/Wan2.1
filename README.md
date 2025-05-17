@@ -145,7 +145,7 @@ The default parameters from the original repo are:
 
 ### How to choose the parameters
 
-- **```--frame_num```**: The number of frames to generate. The default is 81. The output video is at 16 FPS, so 81 frames is 5 seconds. You should choose a number that is 4n+1, where n is the number of frames you want to generate. Generation time and memory usage is proportional to the number of frames. The video quality is also proportional to the
+- **```--frame_num```**: The number of frames to generate. The default is 81. The output video is at 16 FPS, so 81 frames is 5 seconds. You should choose a number that is 4n+1. Generation time and memory usage is proportional to the number of frames. The video quality is also proportional to the
 
 - **```--sample_steps```**: The number of steps to sample. The default is 50 for T2V and 40 for I2V. Generation time increase linearly to the number of steps. The more steps, the better the quality. But it also takes longer to generate.
 
