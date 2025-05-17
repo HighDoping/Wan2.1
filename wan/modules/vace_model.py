@@ -1,10 +1,22 @@
 # Copyright 2024-2025 The Alibaba Wan Team Authors. All rights reserved.
 import torch
-import torch.cuda.amp as amp
+import torch.amp as amp
 import torch.nn as nn
 from diffusers.configuration_utils import register_to_config
 
 from .model import WanAttentionBlock, WanModel, sinusoidal_embedding_1d
+
+
+def get_device():
+    if torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
+
+
+amp_device = get_device()
 
 
 class VaceWanAttentionBlock(WanAttentionBlock):
@@ -207,7 +219,7 @@ class VaceWanModel(WanModel):
         ])
 
         # time embeddings
-        with amp.autocast(dtype=torch.float32):
+        with amp.autocast(device_type=amp_device, dtype=torch.float32):
             e = self.time_embedding(
                 sinusoidal_embedding_1d(self.freq_dim, t).float())
             e0 = self.time_projection(e).unflatten(1, (6, self.dim))

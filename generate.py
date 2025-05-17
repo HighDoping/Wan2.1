@@ -393,6 +393,9 @@ def generate(args):
             use_usp=False,  # Disable Ulysses/ring parallelism (single device)
             t5_cpu=args.t5_cpu,
             t5_quant=args.t5_quant,
+            vae_tile_size=args.tile_size,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
         )
 
         logging.info(
@@ -407,9 +410,6 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
-            disk_offload=args.disk_offload,
-            mps_ram=args.mps_ram,
-            VAE_tile_size=args.tile_size,
         )
 
     elif "i2v" in args.task:
@@ -450,6 +450,9 @@ def generate(args):
             use_usp=False,  # Disable Ulysses/ring parallelism (single device)
             t5_cpu=args.t5_cpu,
             t5_quant=args.t5_quant,
+            vae_tile_size=args.tile_size,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
         )
 
         logging.info("Generating video ...")
@@ -464,9 +467,6 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
-            VAE_tile_size=args.tile_size,
-            disk_offload=args.disk_offload,
-            mps_ram=args.mps_ram,
         )
     elif "flf2v" in args.task:
         if args.prompt is None:
@@ -514,6 +514,9 @@ def generate(args):
             use_usp=(args.ulysses_size > 1 or args.ring_size > 1),
             t5_cpu=args.t5_cpu,
             t5_quant=args.t5_quant,
+            vae_tile_size=args.tile_size,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
         )
 
         logging.info("Generating video ...")
@@ -529,9 +532,6 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
-            VAE_tile_size=args.tile_size,
-            disk_offload=args.disk_offload,
-            mps_ram=args.mps_ram,
         )
 
     elif "vace" in args.task:
@@ -567,6 +567,10 @@ def generate(args):
             dit_fsdp=args.dit_fsdp,
             use_usp=(args.ulysses_size > 1 or args.ring_size > 1),
             t5_cpu=args.t5_cpu,
+            t5_quant=args.t5_quant,
+            vae_tile_size=args.tile_size,
+            disk_offload=args.disk_offload,
+            mps_ram=args.mps_ram,
         )
 
         src_video, src_mask, src_ref_images = wan_vace.prepare_source(
@@ -588,7 +592,8 @@ def generate(args):
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model)
+            offload_model=args.offload_model,
+        )
     else:
         raise ValueError(f"Unkown task type: {args.task}")
 

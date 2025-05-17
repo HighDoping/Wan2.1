@@ -16,6 +16,7 @@ The original repo also loads all models at startup, which takes a lot of memory.
 - Add quantized T5 model to reduce memory usage.
 - Enable mixed precision for MPS, reducing memory usage and increasing speed.
 - Support for FLF2V model.
+- Support for VACE model.
 - Add disk offload for device with smaller RAM to run the 14B models.
 
 ## Installation
@@ -109,6 +110,17 @@ python generate.py --task flf2v-14B --size "1280*720" --frame_num 5 --sample_ste
 
 For 32GB M4 Mac Mini with 10 Gbps external storage, Time taken: 17m51s.
 
+### VACE
+
+VACE can do many tasks, please refer to the [original README](./README_original.md) and [VACE User Guide](https://github.com/ali-vilab/VACE/blob/main/UserGuide.md).
+
+```bash
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+python generate.py --task vace-1.3B --size "832*480" --frame_num 17 --sample_steps 50 --ckpt_dir ./Wan2.1-VACE-1.3B --src_ref_images examples/girl.png,examples/snake.png --prompt "在一个欢乐而充满节日气氛的场景中，穿着鲜艳红色春服的小女孩正与她的可爱卡通蛇嬉戏。她的春服上绣着金色吉祥图案，散发着喜庆的气息，脸上洋溢着灿烂的笑容。蛇身呈现出亮眼的绿色，形状圆润，宽大的眼睛让它显得既友善又幽默。小女孩欢快地用手轻轻抚摸着蛇的头部，共同享受着这温馨的时刻。周围五彩斑斓的灯笼和彩带装饰着环境，阳光透过洒在她们身上，营造出一个充满友爱与幸福的新年氛围。" --tile_size 256 --offload_model True --t5_quant --device mps --save_file output_video_VACE.mp4
+```
+
+For 32GB M4 Mac Mini, time taken: 53m50s.
+
 ## About disk offloading
 
 The disk offloading function uses Accelerate Big Model Inference mode. It allows device with smaller RAM to run the 14B models.
@@ -141,6 +153,8 @@ The default parameters from the original repo are:
 | I2V-14B-480P | Image to Video | 832*480 | 81 | 40|
 | I2V-14B-720P | Image to Video | 1280*720 | 81 | 40 |
 | FLF2V-14B-720P | First-Last-Frame to Video | 1280*720 | 81 | 50 |
+| VACE-1.3B | Any | 832*480 | 81 | 50 |
+| VACE-14B | Any | 1280*720 | 81 | 50 |
 | Any | Text to Image | Any | 1 | 50 |
 
 ### How to choose the parameters

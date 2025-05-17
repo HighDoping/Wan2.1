@@ -826,9 +826,11 @@ class WanVAE:
         vae_pth="cache/vae_step_411000.pth",
         dtype=torch.float,
         device="mps",
+        tile_size=None,
     ):
         self.dtype = dtype
         self.device = device
+        self.tile_size = tile_size
 
         mean = [
             -0.7571,
@@ -877,16 +879,16 @@ class WanVAE:
                 z_dim=z_dim,
             ).eval().requires_grad_(False).to(device))
 
-    def encode(self, videos, tile_size=256):
+    def encode(self, videos):
         """
         videos: A list of videos each with shape [C, T, H, W].
         """
         with amp.autocast(device_type=device, dtype=self.dtype):
-            if tile_size > 0:
+            if self.tile_size > 0:
                 return [
                     self.model.spatial_tiled_encode(
                         u.unsqueeze(0), self.scale,
-                        tile_size).float().squeeze(0) for u in videos
+                        self.tile_size).float().squeeze(0) for u in videos
                 ]
             else:
                 return [
@@ -895,13 +897,14 @@ class WanVAE:
                     for u in videos
                 ]
 
-    def decode(self, zs, tile_size):
+    def decode(self, zs):
         with amp.autocast(device_type=device, dtype=self.dtype):
-            if tile_size > 0:
+            if self.tile_size > 0:
                 return [
                     self.model.spatial_tiled_decode(
                         u.unsqueeze(0), self.scale,
-                        tile_size).float().clamp_(-1, 1).squeeze(0) for u in zs
+                        self.tile_size).float().clamp_(-1, 1).squeeze(0)
+                    for u in zs
                 ]
             else:
                 return [

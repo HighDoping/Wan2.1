@@ -46,6 +46,9 @@ class WanT2V:
         use_usp=False,
         t5_cpu=False,
         t5_quant=False,
+        vae_tile_size=None,
+        disk_offload=False,
+        mps_ram="10GB",
     ):
         r"""
         Initializes the Wan text-to-video generation model components.
@@ -84,7 +87,11 @@ class WanT2V:
         self.rank = rank
         self.t5_cpu = t5_cpu
         self.t5_fsdp = t5_fsdp
+
         self.t5_quant = t5_quant
+        self.vae_tile_size = vae_tile_size
+        self.disk_offload = disk_offload
+        self.mps_ram = mps_ram
 
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
@@ -110,9 +117,6 @@ class WanT2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
-        disk_offload=False,
-        mps_ram="10GB",
-        VAE_tile_size=None,
     ):
         r"""
         Generates video frames from text prompt using diffusion process.
@@ -147,6 +151,8 @@ class WanT2V:
                 - H: Frame height (from size)
                 - W: Frame width from size)
         """
+        self.offload_model = offload_model
+
         # preprocess
         F = frame_num
         vae_model_z_dim = 16
@@ -214,13 +220,13 @@ class WanT2V:
                 clear_cache()
 
         logging.info("Loading WanModel")
-        if disk_offload:
+        if self.disk_offload:
             logging.info("Use disk offload.")
             self.model = WanModel.from_pretrained(
                 self.checkpoint_dir,
                 device_map="auto",
                 max_memory={
-                    "mps": mps_ram,
+                    "mps": self.mps_ram,
                     "cpu": "0.5GB"
                 },
                 offload_folder="disk_offload",
@@ -251,8 +257,9 @@ class WanT2V:
 
         # evaluation mode
         with (
-                amp.autocast(
-                    device_type=str(self.device), dtype=self.param_dtype),
+                amp.autocast(  #type: ignore
+                    device_type=str(self.device),
+                    dtype=self.param_dtype),
                 torch.no_grad(),
                 no_sync(),
         ):
@@ -291,7 +298,7 @@ class WanT2V:
                 latent = latents[0]
                 timestep = [t]
 
-                timestep = torch.stack(timestep)
+                timestep = torch.stack(timestep)  #type: ignore
 
                 noise_pred_cond = self.model(
                     latent_model_input, t=timestep, **arg_c)[0]
@@ -328,9 +335,10 @@ class WanT2V:
                     vae_pth=os.path.join(self.checkpoint_dir,
                                          self.config.vae_checkpoint),
                     device=self.device,
+                    tile_size=self.vae_tile_size,
                 )
                 logging.info("Decoding video frames.")
-                videos = self.vae.decode(x0, tile_size=VAE_tile_size)
+                videos = self.vae.decode(x0)
 
         del noise, latents
         del sample_scheduler

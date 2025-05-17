@@ -49,8 +49,11 @@ class WanFLF2V:
         dit_fsdp=False,
         use_usp=False,
         t5_cpu=False,
-        t5_quant=False,
         init_on_cpu=True,
+        t5_quant=False,
+        vae_tile_size=None,
+        disk_offload=False,
+        mps_ram="10GB",
     ):
         r"""
         Initializes the image-to-video generation model components.
@@ -90,7 +93,11 @@ class WanFLF2V:
         self.rank = rank
         self.t5_cpu = t5_cpu
         self.t5_fsdp = t5_fsdp
+
         self.t5_quant = t5_quant
+        self.vae_tile_size = vae_tile_size
+        self.disk_offload = disk_offload
+        self.mps_ram = mps_ram
 
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
@@ -117,9 +124,6 @@ class WanFLF2V:
         n_prompt="",
         seed=-1,
         offload_model=True,
-        disk_offload=False,
-        mps_ram="10GB",
-        VAE_tile_size=None,
     ):
         r"""
         Generates video frames from input first-last frame and text prompt using diffusion process.
@@ -161,6 +165,8 @@ class WanFLF2V:
                 - H: Frame height (from max_area)
                 - W: Frame width from max_area)
         """
+        self.offload_model = offload_model
+
         first_frame_size = first_frame.size
         last_frame_size = last_frame.size
         first_frame = TF.to_tensor(first_frame).sub_(0.5).div_(0.5).to(
@@ -288,30 +294,28 @@ class WanFLF2V:
             vae_pth=os.path.join(self.checkpoint_dir,
                                  self.config.vae_checkpoint),
             device=self.device,
+            tile_size=self.vae_tile_size,
         )
 
         logging.info("Encoding image.")
-        y = self.vae.encode(
-            [
-                torch.concat(
-                    [
-                        torch.nn.functional.interpolate(
-                            first_frame[None],
-                            size=(first_frame_h, first_frame_w),
-                            mode="bicubic",
-                        ).transpose(0, 1),
-                        torch.zeros(3, F - 2, first_frame_h, first_frame_w),
-                        torch.nn.functional.interpolate(
-                            last_frame[None],
-                            size=(first_frame_h, first_frame_w),
-                            mode="bicubic",
-                        ).transpose(0, 1),
-                    ],
-                    dim=1,
-                ).to(self.device)
-            ],
-            VAE_tile_size,
-        )[0]
+        y = self.vae.encode([
+            torch.concat(
+                [
+                    torch.nn.functional.interpolate(
+                        first_frame[None],
+                        size=(first_frame_h, first_frame_w),
+                        mode="bicubic",
+                    ).transpose(0, 1),
+                    torch.zeros(3, F - 2, first_frame_h, first_frame_w),
+                    torch.nn.functional.interpolate(
+                        last_frame[None],
+                        size=(first_frame_h, first_frame_w),
+                        mode="bicubic",
+                    ).transpose(0, 1),
+                ],
+                dim=1,
+            ).to(self.device)
+        ])[0]
         if offload_model:
             del self.vae
             logging.info("Remove VAE model.")
@@ -319,13 +323,13 @@ class WanFLF2V:
         y = torch.concat([msk, y])
 
         logging.info("Loading WanModel")
-        if disk_offload:
+        if self.disk_offload:
             logging.info("Use disk offload.")
             self.model = WanModel.from_pretrained(
                 self.checkpoint_dir,
                 device_map="auto",
                 max_memory={
-                    "mps": mps_ram,
+                    "mps": self.mps_ram,
                     "cpu": "0.5GB"
                 },
                 offload_folder="disk_offload",
@@ -344,7 +348,7 @@ class WanFLF2V:
 
         # evaluation mode
         with (
-                amp.autocast(
+                amp.autocast( #type: ignore
                     device_type=str(self.device), dtype=self.param_dtype),
                 torch.no_grad(),
                 no_sync(),
@@ -397,7 +401,7 @@ class WanFLF2V:
                 latent_model_input = [latent.to(self.device)]
                 timestep = [t]
 
-                timestep = torch.stack(timestep)
+                timestep = torch.stack(timestep) #type: ignore
 
                 noise_pred_cond = self.model(
                     latent_model_input, t=timestep, **arg_c)[0]
@@ -434,9 +438,10 @@ class WanFLF2V:
                     vae_pth=os.path.join(self.checkpoint_dir,
                                          self.config.vae_checkpoint),
                     device=self.device,
+                    tile_size=self.vae_tile_size,
                 )
                 logging.info("Decoding video.")
-                videos = self.vae.decode(x0, VAE_tile_size)
+                videos = self.vae.decode(x0)
 
         del noise, latent
         del sample_scheduler
