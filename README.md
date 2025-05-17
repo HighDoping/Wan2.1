@@ -42,15 +42,18 @@ huggingface-cli download Wan-AI/Wan2.1-T2V-14B --local-dir ./Wan2.1-T2V-14B
 huggingface-cli download Wan-AI/Wan2.1-I2V-14B-480P --local-dir ./Wan2.1-I2V-14B-480P
 huggingface-cli download Wan-AI/Wan2.1-I2V-14B-720P --local-dir ./Wan2.1-I2V-14B-720P
 huggingface-cli download Wan-AI/Wan2.1-FLF2V-14B-720P --local-dir ./Wan2.1-FLF2V-14B-720P
-
+huggingface-cli download Wan-AI/Wan2.1-VACE-1.3B --local-dir ./Wan2.1-VACE-1.3B
+huggingface-cli download Wan-AI/Wan2.1-VACE-14B --local-dir ./Wan2.1-VACE-14B
 ```
 
 ```bash
-modelscope download Wan-AI/Wan2.1-T2V-1.3 --local_dir ./Wan2.1-T2V-1.3B
+modelscope download Wan-AI/Wan2.1-T2V-1.3B --local_dir ./Wan2.1-T2V-1.3B
 modelscope download Wan-AI/Wan2.1-T2V-14B --local_dir ./Wan2.1-T2V-14B
 modelscope download Wan-AI/Wan2.1-I2V-14B-480P --local_dir ./Wan2.1-I2V-14B-480P
 modelscope download Wan-AI/Wan2.1-I2V-14B-720P --local_dir ./Wan2.1-I2V-14B-720P
 modelscope download Wan-AI/Wan2.1-FLF2V-14B-720P --local_dir ./Wan2.1-FLF2V-14B-720P
+modelscope download Wan-AI/Wan2.1-VACE-1.3B --local_dir ./Wan2.1-VACE-1.3B
+modelscope download Wan-AI/Wan2.1-VACE-14B --local_dir ./Wan2.1-VACE-14B
 ```
 
 To use quantized T5 model, [download it](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf/resolve/main/umt5-xxl-encode-only-Q4_K_M.gguf) from my [🤗 repo](https://huggingface.co/HighDoping/umt5-xxl-encode-gguf) or use huggingface-cli and put it in the same folder as wan model:
@@ -125,6 +128,8 @@ python generate.py --task t2v-14B --size "832*480" --frame_num 5 --sample_steps 
 
 For 32GB M4 Mac Mini with 10 Gbps external storage, Time taken: 14m.
 
+The frame num is still limited by RAM, if the OOM, the error message will be like ```RuntimeError: Invalid buffer size: 23.49 GB```.
+
 ## Default parameters
 
 The default parameters from the original repo are:
@@ -137,3 +142,11 @@ The default parameters from the original repo are:
 | I2V-14B-720P | Image to Video | 1280*720 | 81 | 40 |
 | FLF2V-14B-720P | First-Last-Frame to Video | 1280*720 | 81 | 50 |
 | Any | Text to Image | Any | 1 | 50 |
+
+### How to choose the parameters
+
+- **```--frame_num```**: The number of frames to generate. The default is 81. The output video is at 16 FPS, so 81 frames is 5 seconds. You should choose a number that is 4n+1, where n is the number of frames you want to generate. Generation time and memory usage is proportional to the number of frames. The video quality is also proportional to the
+
+- **```--sample_steps```**: The number of steps to sample. The default is 50 for T2V and 40 for I2V. Generation time increase linearly to the number of steps. The more steps, the better the quality. But it also takes longer to generate.
+
+- **```--tile_size```**: The tile size for the VAE. The default is 256. Choose a smaller number to reduce memory usage.

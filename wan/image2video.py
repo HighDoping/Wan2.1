@@ -258,7 +258,6 @@ class WanI2V:
                                         self.config.clip_tokenizer),
         )
         clip_context = self.clip.visual([img[:, None, :, :]])
-        print(clip_context)
         if offload_model:
             del self.clip
             logging.info("Remove CLIP model.")
