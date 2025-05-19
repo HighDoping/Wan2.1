@@ -118,7 +118,7 @@ def _parse_args():
     parser.add_argument(
         "--tile_size",
         type=int,
-        default=128,
+        default=None,
         help="The tile size for VAE in T2V task.")
     parser.add_argument(
         "--frame_num",

@@ -830,7 +830,10 @@ class WanVAE:
     ):
         self.dtype = dtype
         self.device = device
-        self.tile_size = tile_size
+        if tile_size is None:
+            self.tile_size = 0
+        else:
+            self.tile_size = tile_size
 
         mean = [
             -0.7571,
