@@ -86,7 +86,9 @@ python generate.py --task t2v-1.3B --size "832*480" --frame_num 17 --sample_step
 
 For 32GB M4 Mac Mini, everything runs without swap, Video generation takes about 10GB and VAE uses about 12GB. Time taken: 12m14s.
 
-For ```--frame_num 45 --sample_steps 50 --tile_size 128```, time taken: 1h23m.
+For ```--frame_num 45 --sample_steps 50```, time taken: 1h20m.
+
+Result: [T2V 1.3B](./assets/T2V_1.3B_45_50.mp4)
 
 ### Image-to-Video with 14B model
 
@@ -118,6 +120,8 @@ VACE can do many tasks, please refer to the [original README](./README_original.
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 python generate.py --task vace-1.3B --size "832*480" --frame_num 17 --sample_steps 50 --ckpt_dir ./Wan2.1-VACE-1.3B --src_ref_images examples/girl.png,examples/snake.png --prompt "在一个欢乐而充满节日气氛的场景中，穿着鲜艳红色春服的小女孩正与她的可爱卡通蛇嬉戏。她的春服上绣着金色吉祥图案，散发着喜庆的气息，脸上洋溢着灿烂的笑容。蛇身呈现出亮眼的绿色，形状圆润，宽大的眼睛让它显得既友善又幽默。小女孩欢快地用手轻轻抚摸着蛇的头部，共同享受着这温馨的时刻。周围五彩斑斓的灯笼和彩带装饰着环境，阳光透过洒在她们身上，营造出一个充满友爱与幸福的新年氛围。" --tile_size 256 --offload_model True --t5_quant --device mps --save_file output_video_VACE.mp4
 ```
+
+Result: [VACE 1.3B](./assets/VACE_example.mp4)
 
 For 32GB M4 Mac Mini, time taken: 53m50s.
 
